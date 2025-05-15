@@ -1,6 +1,6 @@
 // wordpress_client.ts
-import { config } from "./config.ts";
-import { ProcessedRedditPost } from "./reddit_client.ts";
+import { config } from "../config.ts";
+import type { ProcessedRedditPost } from "./reddit_client.ts";
 
 // Helper function to upload media (album cover) to WordPress
 async function uploadMediaToWordPress(imageUrl: string, title: string, authToken: string): Promise<number | null> {

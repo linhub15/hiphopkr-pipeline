@@ -1,13 +1,13 @@
 // main.ts
 import { config } from "./config.ts";
-import { fetchRedditPosts, type ProcessedRedditPost } from "./reddit_client.ts";
-import { loadProcessedPostIds, saveProcessedPostId } from "./data_store.ts"; // Updated import
-import { enrichWithMusicData } from "./music_enrichment.ts";
-import { extractNewsContent } from "./news_content_extractor.ts";
-import { generateSynopsis } from "./gpt_client.ts";
-import { createWordPressDraft } from "./wordpress_client.ts";
-import { writeDebugMarkdownFile } from "./debug_writer.ts"; // Added import
-import { cron } from "https://deno.land/x/deno_cron@v1.0.0/cron.ts";
+import { fetchRedditPosts, type ProcessedRedditPost } from "./lib/reddit_client.ts";
+import { loadProcessedPostIds, saveProcessedPostId } from "./lib/data_store.ts"; // Updated import
+import { enrichWithMusicData } from "./lib/music_enrichment.ts";
+import { extractNewsContent } from "./lib/news_content_extractor.ts";
+import { generateSynopsis } from "./lib/gpt_client.ts";
+import { createWordPressDraft } from "./lib/wordpress_client.ts";
+import { writeDebugMarkdownFile } from "./lib/debug_writer.ts"; // Added import
+import { cron } from "deno_cron";
 
 async function runPipeline() {
   console.log(`[${new Date().toISOString()}] Starting Khiphop Pipeline...`);

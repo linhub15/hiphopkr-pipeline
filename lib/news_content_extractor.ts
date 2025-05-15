@@ -1,5 +1,5 @@
 // news_content_extractor.ts
-import { ProcessedRedditPost } from "./reddit_client.ts";
+import type { ProcessedRedditPost } from "./reddit_client.ts";
 // You might need an HTML parser if fetching content from external links
 // Example: import { DOMParser } from "https://deno.land/x/deno_dom/deno-dom-wasm.ts";
 

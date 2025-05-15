@@ -1,5 +1,5 @@
 // config.ts
-import { load } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+import { load } from "std/dotenv";
 
 await load({ export: true }); // Exports .env variables to Deno.env
 
@@ -7,6 +7,8 @@ export const config = {
   reddit: {
     subredditUrl: "https://www.reddit.com/r/khiphop/.json",
     limit: 25, // Number of posts to fetch
+    cachePath: "./tmp/reddit_cache.json", // Path to store the cached Reddit JSON
+    cacheDurationMs: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
   },
   jsonStore: { // New section for local JSON file persistence
     processedPostsPath: "./processed_post_ids.json",

@@ -1,5 +1,5 @@
 // data_store.ts
-import { config } from "./config.ts";
+import { config } from "../config.ts";
 import { ProcessedRedditPost } from "./reddit_client.ts"; // If you decide to store full posts
 
 const PROCESSED_IDS_PATH = config.jsonStore.processedPostsPath;

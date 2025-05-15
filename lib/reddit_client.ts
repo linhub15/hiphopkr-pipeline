@@ -1,5 +1,6 @@
 // reddit_client.ts
-// ... (keep the existing code from the previous version)
+import { config } from "../config.ts";
+import { ensureDir } from "std/fs";
 // Ensure ProcessedRedditPost has a reliable `id` field.
 // The existing `id: data.permalink.split('/')[4] || Date.now().toString()` should work,
 // but using data.id (which is Reddit's internal base36 ID like `1abcde`) would be more standard if available directly,
@@ -42,13 +43,46 @@ interface ProcessedRedditPost {
   appleMusicLink?: string;
 }
 
+async function fetchAndCacheRedditData(subredditUrl: string, limit: number): Promise<any> {
+  const cachePath = config.reddit.cachePath;
+  const cacheDuration = config.reddit.cacheDurationMs;
+
+  try {
+    const fileInfo = await Deno.stat(cachePath);
+    const lastModified = fileInfo.mtime?.getTime() || 0;
+    if (Date.now() - lastModified < cacheDuration) {
+      console.log(`Using cached Reddit data from ${cachePath}`);
+      const cachedData = await Deno.readTextFile(cachePath);
+      return JSON.parse(cachedData);
+    }
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      console.warn(`Error checking cache file ${cachePath}:`, error);
+    }
+    // If cache doesn't exist or other error, proceed to fetch
+  }
+
+  console.log(`Fetching fresh Reddit data from ${subredditUrl}`);
+  const response = await fetch(`${subredditUrl}?limit=${limit}&t=day`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Reddit data: ${response.status} ${response.statusText}`);
+  }
+  const jsonData = await response.json();
+
+  try {
+    await ensureDir("./tmp"); // Ensure tmp directory exists
+    await Deno.writeTextFile(cachePath, JSON.stringify(jsonData, null, 2));
+    console.log(`Cached Reddit data to ${cachePath}`);
+  } catch (error) {
+    console.error(`Error writing cache file ${cachePath}:`, error);
+  }
+
+  return jsonData;
+}
+
 export async function fetchRedditPosts(subredditUrl: string, limit: number = 25): Promise<ProcessedRedditPost[]> {
   try {
-    const response = await fetch(`${subredditUrl}?limit=${limit}&t=day`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Reddit data: ${response.status} ${response.statusText}`);
-    }
-    const jsonData = await response.json();
+    const jsonData = await fetchAndCacheRedditData(subredditUrl, limit);
     if (!jsonData.data || !jsonData.data.children) {
         console.warn("Reddit API response format unexpected or no posts found:", jsonData);
         return [];
@@ -98,7 +132,7 @@ function determineFeatureType(flair?: string, title?: string): ProcessedRedditPo
     if (lowerFlair.includes('music video') || lowerTitle.includes('[mv]')) return 'mv';
     if (lowerFlair.includes('album') || lowerFlair.includes('[album]')) return 'album';
     if (lowerFlair.includes('ep') || lowerFlair.includes('[ep]')) return 'ep';
-    if (lowerFlair.includes('audio') || lowerFlair.includes('[audio]')) return 'track';
+    if (lowerFlair.includes('audio') || lowerTitle.includes('[audio]')) return 'track';
     if (lowerFlair.includes('news')) return 'news';
     if (lowerFlair.includes('rumor')) return 'rumor';
     return 'other';

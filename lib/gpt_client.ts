@@ -1,6 +1,6 @@
 // gpt_client.ts
-import { config } from "./config.ts";
-import { ProcessedRedditPost } from "./reddit_client.ts";
+import { config } from "../config.ts";
+import type { ProcessedRedditPost } from "./reddit_client.ts";
 
 export async function generateSynopsis(post: ProcessedRedditPost): Promise<ProcessedRedditPost> {
   if (!config.openai.apiKey) {
