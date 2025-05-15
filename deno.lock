@@ -1,0 +1,11 @@
+{
+  "version": "5",
+  "remote": {
+    "https://deno.land/std@0.224.0/dotenv/mod.ts": "0180eaeedaaf88647318811cdaa418cc64dc51fb08354f91f5f480d0a1309f7d",
+    "https://deno.land/std@0.224.0/dotenv/parse.ts": "09977ff88dfd1f24f9973a338f0f91bbdb9307eb5ff6085446e7c423e4c7ba0c",
+    "https://deno.land/std@0.224.0/dotenv/stringify.ts": "275da322c409170160440836342eaa7cf012a1d11a7e700d8ca4e7f2f8aa4615",
+    "https://deno.land/std@0.224.0/fs/_get_file_info_type.ts": "da7bec18a7661dba360a1db475b826b18977582ce6fc9b25f3d4ee0403fe8cbd",
+    "https://deno.land/std@0.224.0/fs/ensure_dir.ts": "51a6279016c65d2985f8803c848e2888e206d1b510686a509fa7cc34ce59d29f",
+    "https://deno.land/x/deno_cron@v1.0.0/cron.ts": "7f984d0c4c7ac4fb1ad3cd241d457e7808a9362735d910abb02dc689883ee3ef"
+  }
+}
