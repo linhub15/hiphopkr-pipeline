@@ -1,10 +1,9 @@
 {
-    "tasks": {
-        "start": "deno run --allow-net --allow-env --allow-read --allow-write main.ts"
-    },
-    "imports": {
-        "std/dotenv": "https://deno.land/std@0.224.0/dotenv/mod.ts",
-        "std/fs": "https://deno.land/std@0.224.0/fs/ensure_dir.ts",
-        "deno_cron": "https://deno.land/x/deno_cron@v1.0.0/cron.ts"
-    }
+  "tasks": {
+    "start": "deno run --allow-net --allow-env --allow-read --allow-write src/main.ts"
+  },
+  "imports": {
+    "std/dotenv": "https://deno.land/std@0.224.0/dotenv/mod.ts",
+    "std/fs": "https://deno.land/std@0.224.0/fs/ensure_dir.ts"
+  }
 }

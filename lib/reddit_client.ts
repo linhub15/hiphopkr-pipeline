@@ -1,5 +1,5 @@
 // reddit_client.ts
-import { config } from "../config.ts";
+import { config } from "../src/config.ts";
 import { ensureDir } from "std/fs";
 // Ensure ProcessedRedditPost has a reliable `id` field.
 // The existing `id: data.permalink.split('/')[4] || Date.now().toString()` should work,
@@ -34,7 +34,7 @@ interface ProcessedRedditPost {
   textContent?: string;
   artist?: string;
   trackOrAlbumTitle?: string;
-  featureType?: 'track' | 'album' | 'ep' | 'mv' | 'news' | 'rumor' | 'other';
+  featureType?: "track" | "album" | "ep" | "mv" | "news" | "rumor" | "other";
   releaseDate?: string;
   producers?: string[];
   albumCoverUrl?: string;
@@ -43,7 +43,10 @@ interface ProcessedRedditPost {
   appleMusicLink?: string;
 }
 
-async function fetchAndCacheRedditData(subredditUrl: string, limit: number): Promise<any> {
+async function fetchAndCacheRedditData(
+  subredditUrl: string,
+  limit: number,
+): Promise<any> {
   const cachePath = config.reddit.cachePath;
   const cacheDuration = config.reddit.cacheDurationMs;
 
@@ -65,7 +68,9 @@ async function fetchAndCacheRedditData(subredditUrl: string, limit: number): Pro
   console.log(`Fetching fresh Reddit data from ${subredditUrl}`);
   const response = await fetch(`${subredditUrl}?limit=${limit}&t=day`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch Reddit data: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch Reddit data: ${response.status} ${response.statusText}`,
+    );
   }
   const jsonData = await response.json();
 
@@ -81,6 +86,7 @@ async function fetchAndCacheRedditData(subredditUrl: string, limit: number): Pro
 }
 
 export async function fetchRedditPosts(subredditUrl: string, limit: number = 25): Promise<ProcessedRedditPost[]> {
+  const allowedFlairs = ["Music Video", "Album", "News", "Audio"];
   try {
     const jsonData = await fetchAndCacheRedditData(subredditUrl, limit);
     if (!jsonData.data || !jsonData.data.children) {
@@ -91,6 +97,7 @@ export async function fetchRedditPosts(subredditUrl: string, limit: number = 25)
 
     return posts
         .filter(post => !post.data.stickied) // Filter out stickied posts
+        .filter(post => post.data.link_flair_text && allowedFlairs.includes(post.data.link_flair_text)) // Filter by allowed flairs
         .map(post => processRedditPost(post.data))
         .filter(p => p !== null) as ProcessedRedditPost[];
   } catch (error) {
@@ -99,10 +106,12 @@ export async function fetchRedditPosts(subredditUrl: string, limit: number = 25)
   }
 }
 
-function processRedditPost(data: RedditPostData["data"]): ProcessedRedditPost | null {
+function processRedditPost(
+  data: RedditPostData["data"],
+): ProcessedRedditPost | null {
   let thumbnailUrl = data.thumbnail;
-  if (!thumbnailUrl || ['self', 'default', 'nsfw', ''].includes(thumbnailUrl)) {
-      thumbnailUrl = undefined;
+  if (!thumbnailUrl || ["self", "default", "nsfw", ""].includes(thumbnailUrl)) {
+    thumbnailUrl = undefined;
   }
 
   const processed: ProcessedRedditPost = {
@@ -124,55 +133,70 @@ function processRedditPost(data: RedditPostData["data"]): ProcessedRedditPost | 
   return processed;
 }
 
-function determineFeatureType(flair?: string, title?: string): ProcessedRedditPost['featureType'] {
-    // ... (same as before)
-    const lowerFlair = flair?.toLowerCase() || '';
-    const lowerTitle = title?.toLowerCase() || '';
+function determineFeatureType(
+  flair?: string,
+  title?: string,
+): ProcessedRedditPost["featureType"] {
+  // ... (same as before)
+  const lowerFlair = flair?.toLowerCase() || "";
+  const lowerTitle = title?.toLowerCase() || "";
 
-    if (lowerFlair.includes('music video') || lowerTitle.includes('[mv]')) return 'mv';
-    if (lowerFlair.includes('album') || lowerFlair.includes('[album]')) return 'album';
-    if (lowerFlair.includes('ep') || lowerFlair.includes('[ep]')) return 'ep';
-    if (lowerFlair.includes('audio') || lowerTitle.includes('[audio]')) return 'track';
-    if (lowerFlair.includes('news')) return 'news';
-    if (lowerFlair.includes('rumor')) return 'rumor';
-    return 'other';
+  if (lowerFlair.includes("music video") || lowerTitle.includes("[mv]")) {
+    return "mv";
+  }
+  if (lowerFlair.includes("album") || lowerFlair.includes("[album]")) {
+    return "album";
+  }
+  if (lowerFlair.includes("ep") || lowerFlair.includes("[ep]")) return "ep";
+  if (lowerFlair.includes("audio") || lowerTitle.includes("[audio]")) {
+    return "track";
+  }
+  if (lowerFlair.includes("news")) return "news";
+  if (lowerFlair.includes("rumor")) return "rumor";
+  return "other";
 }
 
-function extractArtistAndTitle(title: string, featureType?: ProcessedRedditPost['featureType']): { artist?: string; trackOrAlbumTitle?: string } {
-    // ... (same as before)
-      let artist, trackOrAlbumTitle;
-      const patterns = [
-          /^(.*?)\s*-\s*(.*?)(?:\s*\[(.*?)\])?(?:\s*\(feat\.(.*?)\))?$/,
-      ];
+function extractArtistAndTitle(
+  title: string,
+  featureType?: ProcessedRedditPost["featureType"],
+): { artist?: string; trackOrAlbumTitle?: string } {
+  let artist, trackOrAlbumTitle;
+  const patterns = [
+    /^(.*?)\s*-\s*(.*?)(?:\s*\[(.*?)\])?(?:\s*\(feat\.(.*?)\))?$/,
+  ];
 
-      for (const pattern of patterns) {
-          const match = title.match(pattern);
-          if (match) {
-              artist = match[1]?.trim();
-              trackOrAlbumTitle = match[2]?.trim();
-              const tag = match[3]?.trim().toLowerCase();
-              const featuredArtist = match[4]?.trim();
+  for (const pattern of patterns) {
+    const match = title.match(pattern);
+    if (match) {
+      artist = match[1]?.trim();
+      trackOrAlbumTitle = match[2]?.trim();
+      const tag = match[3]?.trim().toLowerCase();
+      const featuredArtist = match[4]?.trim();
 
-              if (featuredArtist && featureType === 'track') {
-                  trackOrAlbumTitle += ` (feat. ${featuredArtist})`;
-              }
-              if (tag) {
-                  if (tag.includes('mv') && !featureType) featureType = 'mv';
-                  if (tag.includes('album') && !featureType) featureType = 'album';
-              }
-              break;
-          }
+      if (featuredArtist && featureType === "track") {
+        trackOrAlbumTitle += ` (feat. ${featuredArtist})`;
       }
-      if (!artist && title.includes('-')) {
-          const parts = title.split('-').map(p => p.trim());
-          artist = parts[0];
-          trackOrAlbumTitle = parts.slice(1).join(' - ').replace(/\[.*?\]/g, '').trim();
+      if (tag) {
+        if (tag.includes("mv") && !featureType) featureType = "mv";
+        if (tag.includes("album") && !featureType) featureType = "album";
       }
+      break;
+    }
+  }
+  if (!artist && title.includes("-")) {
+    const parts = title.split("-").map((p) => p.trim());
+    artist = parts[0];
+    trackOrAlbumTitle = parts.slice(1).join(" - ").replace(/\[.*?\]/g, "")
+      .trim();
+  }
 
-      if (trackOrAlbumTitle) {
-          trackOrAlbumTitle = trackOrAlbumTitle.replace(/(\[MV\]|\[Audio\]|\[Album\]|\[EP\]|\(.*?Prod.*?\))/gi, '').trim();
-      }
-      return { artist, trackOrAlbumTitle };
+  if (trackOrAlbumTitle) {
+    trackOrAlbumTitle = trackOrAlbumTitle.replace(
+      /(\[MV\]|\[Audio\]|\[Album\]|\[EP\]|\(.*?Prod.*?\))/gi,
+      "",
+    ).trim();
+  }
+  return { artist, trackOrAlbumTitle };
 }
 
 export type { ProcessedRedditPost };

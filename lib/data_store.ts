@@ -1,5 +1,5 @@
 // data_store.ts
-import { config } from "../config.ts";
+import { config } from "../src/config.ts";
 import { ProcessedRedditPost } from "./reddit_client.ts"; // If you decide to store full posts
 
 const PROCESSED_IDS_PATH = config.jsonStore.processedPostsPath;
@@ -18,7 +18,10 @@ export async function loadProcessedPostIds(): Promise<Set<string>> {
       // File doesn't exist, which is fine on the first run
       return new Set();
     }
-    console.error(`Error reading processed post IDs file (${PROCESSED_IDS_PATH}):`, error);
+    console.error(
+      `Error reading processed post IDs file (${PROCESSED_IDS_PATH}):`,
+      error,
+    );
     return new Set(); // Return empty set on other errors to avoid breaking the pipeline
   }
 }
@@ -37,10 +40,16 @@ export async function saveProcessedPostId(postId: string): Promise<void> {
   existingIds.add(postId);
   try {
     const idsArray = Array.from(existingIds);
-    await Deno.writeTextFile(PROCESSED_IDS_PATH, JSON.stringify(idsArray, null, 2));
+    await Deno.writeTextFile(
+      PROCESSED_IDS_PATH,
+      JSON.stringify(idsArray, null, 2),
+    );
     // console.log(`Saved post ID ${postId} to ${PROCESSED_IDS_PATH}`);
   } catch (error) {
-    console.error(`Error writing processed post ID to file (${PROCESSED_IDS_PATH}):`, error);
+    console.error(
+      `Error writing processed post ID to file (${PROCESSED_IDS_PATH}):`,
+      error,
+    );
   }
 }
 

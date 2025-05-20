@@ -5,7 +5,7 @@ await load({ export: true }); // Exports .env variables to Deno.env
 
 export const config = {
   reddit: {
-    subredditUrl: "https://www.reddit.com/r/khiphop/.json",
+    subredditUrl: "https://www.reddit.com/r/khiphop/hot.json?limit=100",
     limit: 25, // Number of posts to fetch
     cachePath: "./tmp/reddit_cache.json", // Path to store the cached Reddit JSON
     cacheDurationMs: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
@@ -31,8 +31,7 @@ export const config = {
   openai: {
     apiKey: Deno.env.get("OPENAI_API_KEY"),
     apiUrl: "https://api.openai.com/v1/chat/completions",
-  },
-  cronSchedule: "0 0,12 * * *", // "At minute 0 past hour 0 and 12."
+  }
 };
 
 // Validate essential config
@@ -40,7 +39,10 @@ if (!config.spotify.clientId || !config.spotify.clientSecret) {
   console.error("Missing SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET in .env");
   Deno.exit(1);
 }
-if (!config.wordpress.endpoint || !config.wordpress.username || !config.wordpress.password) {
+if (
+  !config.wordpress.endpoint || !config.wordpress.username ||
+  !config.wordpress.password
+) {
   console.error("Missing WordPress configuration in .env");
   Deno.exit(1);
 }
