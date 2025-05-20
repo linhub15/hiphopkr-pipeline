@@ -1,8 +1,9 @@
 // data_store.ts
 import { config } from "../src/config.ts";
-import { ProcessedRedditPost } from "./reddit_client.ts"; // If you decide to store full posts
+import type { ProcessedRedditPost } from "./reddit_client.ts"; // Un-commented and used
 
 const PROCESSED_IDS_PATH = config.jsonStore.processedPostsPath;
+const STAGING_PATH = config.jsonStore.stagingPath; // Added staging path
 
 /**
  * Loads the set of processed Reddit post IDs from a local JSON file.
@@ -51,6 +52,61 @@ export async function saveProcessedPostId(postId: string): Promise<void> {
       error,
     );
   }
+}
+
+/**
+ * Loads staged posts from the staging JSON file.
+ * @returns A Promise resolving to an array of ProcessedRedditPost.
+ */
+export async function loadStagedPosts(): Promise<ProcessedRedditPost[]> {
+  try {
+    const fileContent = await Deno.readTextFile(STAGING_PATH);
+    return JSON.parse(fileContent) as ProcessedRedditPost[];
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      return []; // File doesn't exist, return empty array
+    }
+    console.error(
+      `Error reading staged posts file (${STAGING_PATH}):`,
+      error,
+    );
+    return []; // Return empty array on other errors
+  }
+}
+
+/**
+ * Saves an array of posts to the staging JSON file.
+ * This will overwrite the existing staging file.
+ * @param posts The array of ProcessedRedditPost to save.
+ */
+export async function savePostsToStage(
+  posts: ProcessedRedditPost[],
+): Promise<void> {
+  try {
+    await Deno.writeTextFile(STAGING_PATH, JSON.stringify(posts, null, 2));
+    console.log(`Saved ${posts.length} posts to staging area: ${STAGING_PATH}`);
+  } catch (error) {
+    console.error(
+      `Error writing posts to staging file (${STAGING_PATH}):`,
+      error,
+    );
+  }
+}
+
+/**
+ * Adds a single post to the staging area.
+ * It reads existing staged posts, adds the new one, and writes them back.
+ * @param post The ProcessedRedditPost to add to the stage.
+ */
+export async function addPostToStage(post: ProcessedRedditPost): Promise<void> {
+  const stagedPosts = await loadStagedPosts();
+  // Optional: Check if post already exists in stage by ID to prevent duplicates
+  if (stagedPosts.some((p) => p.id === post.id)) {
+    console.log(`Post ${post.id} already in staging area. Skipping.`);
+    return;
+  }
+  stagedPosts.push(post);
+  await savePostsToStage(stagedPosts);
 }
 
 /**

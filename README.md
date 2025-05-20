@@ -1,8 +1,9 @@
+# Hiphopkr.com auto post creation
+
 This was generated with Gemina 2.5 Pro prompted by Hubert Lin
 
-pull data from Reddit through RSS
-
-Singles, Music videos, Albums Spotify OpenAI - format the post content
+This data pipeline handles creation of posts by taking data from /r/khiphop and
+spotify.
 
 Album release
 

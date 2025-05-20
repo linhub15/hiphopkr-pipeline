@@ -1,3 +1,5 @@
-debug*
+debug_markdown_posts
 processed_post_ids.json
 tmp
+
+.env

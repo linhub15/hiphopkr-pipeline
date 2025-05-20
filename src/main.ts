@@ -5,16 +5,16 @@ import {
   type ProcessedRedditPost,
 } from "../lib/reddit_client.ts";
 import {
+  addPostToStage, // Added import for staging
   loadProcessedPostIds,
   saveProcessedPostId,
-} from "../lib/data_store.ts"; // Updated import
+} from "../lib/data_store.ts";
 import { enrichWithMusicData } from "../lib/music_enrichment.ts";
 import { extractNewsContent } from "../lib/news_content_extractor.ts";
 import { generateSynopsis } from "../lib/gpt_client.ts";
-import { createWordPressDraft } from "../lib/wordpress_client.ts";
-import { writeDebugMarkdownFile } from "../lib/debug_writer.ts"; // Added import
+import { writeDebugMarkdownFile } from "../lib/debug_writer.ts";
 
-async function runPipeline() {
+export async function runPipeline() {
   console.log(`[${new Date().toISOString()}] Starting Khiphop Pipeline...`);
 
   // 1. Load IDs of already processed posts from local JSON file
@@ -26,7 +26,7 @@ async function runPipeline() {
   // 2. Pull data from Reddit
   console.log("Fetching posts from Reddit...");
   const redditPosts = await fetchRedditPosts(
-    config.reddit.subredditUrl,
+    new URL(config.reddit.subredditUrl),
     config.reddit.limit,
   );
   if (redditPosts.length === 0) {
@@ -34,12 +34,11 @@ async function runPipeline() {
     console.log(`[${new Date().toISOString()}] Khiphop Pipeline run finished.`);
     return;
   }
-  console.log(`Workspaceed ${redditPosts.length} posts from Reddit.`);
+  console.log(`Fetched ${redditPosts.length} posts from Reddit.`); // Corrected log message
 
   const postsToProcess: ProcessedRedditPost[] = [];
   for (const post of redditPosts) {
-    if (processedPostIds.has(post.id)) { // Check against loaded IDs
-      // console.log(`Skipping already processed post: ${post.id} - ${post.title}`);
+    if (processedPostIds.has(post.id)) {
       continue;
     }
     postsToProcess.push(post);
@@ -54,8 +53,6 @@ async function runPipeline() {
   }
   console.log(`Processing ${postsToProcess.length} new posts.`);
 
-  // This array will hold the fully enriched posts for this run
-  // It's not persisted as a whole, but individual IDs are.
   const processedInThisRun: ProcessedRedditPost[] = [];
 
   for (let post of postsToProcess) {
@@ -84,9 +81,8 @@ async function runPipeline() {
       await writeDebugMarkdownFile(post);
     }
 
-    // 5. Create WordPress draft FOR THIS POST
-    // Add a check: only create WP post if essential data (title, content) is present
-    let wpDraftCreated = false;
+    // 5. Add to Staging Area instead of direct WordPress posting
+    // Check if post has essential data before staging
     if (
       (post.artist && post.trackOrAlbumTitle) || // Music posts
       (post.featureType === "news" && post.description &&
@@ -95,35 +91,37 @@ async function runPipeline() {
         post.description.length > 20) || // Rumor posts
       (post.featureType === "other" && post.title && post.sourceUrl) // Other link posts
     ) {
-      console.log(`Creating WP draft for: ${post.title}`);
-      const draft = await createWordPressDraft(post);
-      if (draft) {
-        wpDraftCreated = true;
-      }
+      console.log(`Adding post to staging area: ${post.title}`);
+      await addPostToStage(post);
+      // We still mark as processed to avoid re-enriching,
+      // actual publishing will be a separate step.
+      await saveProcessedPostId(post.id);
     } else {
       console.warn(
-        `Skipping WordPress draft for "${post.title}" (ID: ${post.id}) due to missing critical information for its type.`,
+        `Skipping staging for "${post.title}" (ID: ${post.id}) due to missing critical information.`,
       );
+      // Optionally, still mark as processed if you don't want to retry enrichment,
+      // or leave it to be picked up again if criteria might be met later (e.g. manual edit).
+      // For now, we'll mark it as processed to avoid loops if data is inherently missing.
+      await saveProcessedPostId(post.id);
     }
 
-    // 6. Mark post as processed by saving its ID (if WP draft was successful or not deemed critical)
-    // You might choose to only save ID if WP draft creation was successful,
-    // or save it anyway to prevent re-processing the enrichment steps.
-    // For now, let's save it if it went through the main processing steps.
-    await saveProcessedPostId(post.id);
-    console.log(`Post ID ${post.id} marked as processed.`);
-    processedInThisRun.push(post); // Add to in-memory list for this run's summary
+    // The following block for direct WP posting and subsequent saveProcessedPostId is removed.
+    // The saveProcessedPostId is now handled within the staging logic.
+
+    // console.log(`Post ID ${post.id} marked as processed.`); // Moved or handled within staging logic
+    processedInThisRun.push(post);
   }
 
-  // Optional: Log summary of what was done in this run
   if (processedInThisRun.length > 0) {
     console.log(
-      `\nSummary of this run: ${processedInThisRun.length} posts were processed and their IDs saved.`,
+      `\nSummary of this run: ${processedInThisRun.length} posts were processed and considered for staging.`,
     );
-    // If you wanted to save the full enriched data for posts processed *in this run*:
-    // await saveEnrichedPostData(processedInThisRun); // Implement this in data_store.ts if needed
+    console.log(
+      `Staged posts can be found at: ${config.jsonStore.stagingPath}`,
+    );
   } else {
-    console.log("\nNo new posts were fully processed in this run.");
+    console.log("\nNo new posts were processed in this run.");
   }
 
   console.log(`[${new Date().toISOString()}] Khiphop Pipeline run finished.`);
@@ -131,12 +129,13 @@ async function runPipeline() {
 
 // --- Main Execution & Scheduling ---
 if (import.meta.main) {
-  console.log("Khiphop Pipeline Started."); // Changed log message
+  console.log("Khiphop Pipeline Started.");
   console.log(
-    `Persistence: Using local JSON file at ${config.jsonStore.processedPostsPath}`,
+    `Persistence: Processed IDs at ${config.jsonStore.processedPostsPath}`,
+  );
+  console.log(
+    `Staging Area: Posts ready for review at ${config.jsonStore.stagingPath}`,
   );
 
-  runPipeline().catch((err) =>
-    console.error("Pipeline run failed:", err) // Simplified error message
-  );
+  runPipeline().catch((err) => console.error("Pipeline run failed:", err));
 }

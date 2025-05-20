@@ -43,10 +43,19 @@ interface ProcessedRedditPost {
   appleMusicLink?: string;
 }
 
+interface RedditApiResponse {
+  kind: string;
+  data: {
+    children: RedditPostData[];
+    after: string | null;
+    before: string | null;
+  };
+}
+
 async function fetchAndCacheRedditData(
-  subredditUrl: string,
+  subredditUrl: URL,
   limit: number,
-): Promise<any> {
+): Promise<RedditApiResponse> {
   const cachePath = config.reddit.cachePath;
   const cacheDuration = config.reddit.cacheDurationMs;
 
@@ -65,14 +74,18 @@ async function fetchAndCacheRedditData(
     // If cache doesn't exist or other error, proceed to fetch
   }
 
-  console.log(`Fetching fresh Reddit data from ${subredditUrl}`);
-  const response = await fetch(`${subredditUrl}?limit=${limit}&t=day`);
+  console.log(`Fetching fresh Reddit data from ${subredditUrl.href}`);
+  const fetchUrl = new URL(subredditUrl.href); // Create a new URL object to safely add search params
+  fetchUrl.searchParams.append("limit", limit.toString());
+  fetchUrl.searchParams.append("t", "day");
+
+  const response = await fetch(fetchUrl);
   if (!response.ok) {
     throw new Error(
       `Failed to fetch Reddit data: ${response.status} ${response.statusText}`,
     );
   }
-  const jsonData = await response.json();
+  const jsonData = await response.json() as RedditApiResponse;
 
   try {
     await ensureDir("./tmp"); // Ensure tmp directory exists
@@ -85,21 +98,34 @@ async function fetchAndCacheRedditData(
   return jsonData;
 }
 
-export async function fetchRedditPosts(subredditUrl: string, limit: number = 25): Promise<ProcessedRedditPost[]> {
-  const allowedFlairs = ["Music Video", "Album", "News", "Audio"];
+export async function fetchRedditPosts(
+  subredditUrl: URL,
+  limit = 100,
+): Promise<ProcessedRedditPost[]> { // Changed to URL type
   try {
     const jsonData = await fetchAndCacheRedditData(subredditUrl, limit);
     if (!jsonData.data || !jsonData.data.children) {
-        console.warn("Reddit API response format unexpected or no posts found:", jsonData);
-        return [];
+      console.warn(
+        "Reddit API response format unexpected or no posts found:",
+        jsonData,
+      );
+      return [];
     }
     const posts: RedditPostData[] = jsonData.data.children;
 
     return posts
-        .filter(post => !post.data.stickied) // Filter out stickied posts
-        .filter(post => post.data.link_flair_text && allowedFlairs.includes(post.data.link_flair_text)) // Filter by allowed flairs
-        .map(post => processRedditPost(post.data))
-        .filter(p => p !== null) as ProcessedRedditPost[];
+      .filter((post) => !post.data.stickied) // Filter out stickied posts
+      .filter((post) => {
+        if (
+          config.reddit.allowedFlairs && config.reddit.allowedFlairs.length > 0
+        ) {
+          return post.data.link_flair_text &&
+            config.reddit.allowedFlairs.includes(post.data.link_flair_text);
+        }
+        return true; // If allowedFlairs is empty or not defined, process all flairs
+      })
+      .map((post) => processRedditPost(post.data))
+      .filter((p) => p !== null) as ProcessedRedditPost[];
   } catch (error) {
     console.error("Error fetching or processing Reddit posts:", error);
     return [];

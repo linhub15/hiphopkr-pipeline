@@ -43,8 +43,7 @@ async function getSpotifyToken(): Promise<string | null> {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": "Basic " +
-          btoa(`${config.spotify.clientId}:${config.spotify.clientSecret}`),
+        "Authorization": `Basic ${btoa(`${config.spotify.clientId}:${config.spotify.clientSecret}`)}`,
       },
       body: "grant_type=client_credentials",
     });
@@ -69,7 +68,7 @@ async function searchSpotify(
   query: string,
   type: "track" | "album",
   token: string,
-): Promise<any> {
+): Promise<SpotifyApi.SearchResponse> { // Changed any to SpotifyApi.SearchResponse
   const url = `${config.spotify.apiUrl}/search?q=${
     encodeURIComponent(query)
   }&type=${type}&limit=5&market=KR`; // Prioritize Korean market
@@ -82,10 +81,10 @@ async function searchSpotify(
         `Spotify search error: ${response.status} ${await response.text()}`,
       );
     }
-    return await response.json();
+    return await response.json() as SpotifyApi.SearchResponse; // Added type assertion
   } catch (error) {
     console.error(`Error searching Spotify for ${type} "${query}":`, error);
-    return null;
+    return { tracks: { items: [] }, albums: { items: [] } }; // Return a default structure on error
   }
 }
 
@@ -162,86 +161,120 @@ function extractProducers(albumData: SpotifyAlbum): string[] {
 export async function enrichWithMusicData(
   post: ProcessedRedditPost,
 ): Promise<ProcessedRedditPost> {
-  if (
-    !post.artist || !post.trackOrAlbumTitle ||
-    !["track", "album", "ep", "mv"].includes(post.featureType!)
-  ) {
-    return post; // Not a music release or missing key info
-  }
-
   const token = await getSpotifyToken();
   if (!token) return post;
 
-  const searchType = (post.featureType === "track" || post.featureType === "mv")
-    ? "track"
-    : "album";
-  // Try to make search query more specific
-  let query = `${post.artist} ${post.trackOrAlbumTitle}`;
-  if (post.featureType === "album" || post.featureType === "ep") {
-    query += ` album`; // Help Spotify differentiate album searches
+  // Determine search query and type
+  let query = "";
+  let searchType: "track" | "album" = "track";
+
+  if (post.artist && post.trackOrAlbumTitle) {
+    query = `${post.artist} ${post.trackOrAlbumTitle}`;
+    if (post.featureType === "album" || post.featureType === "ep") {
+      searchType = "album";
+    }
+  } else if (post.title) {
+    // Fallback to title parsing - this is less reliable
+    // Simple regex to find Artist - Title patterns, can be improved
+    const match = post.title.match(/([^-]+)-([^[(]+)/);
+    if (match?.[1] && match[2]) {
+      post.artist = match[1].trim();
+      post.trackOrAlbumTitle = match[2].trim();
+      query = `${post.artist} ${post.trackOrAlbumTitle}`;
+      // Guess type based on keywords in title - very basic
+      if (
+        post.title.toLowerCase().includes("album") ||
+        post.title.toLowerCase().includes("ep")
+      ) {
+        searchType = "album";
+      }
+    } else {
+      return post; // Not enough info to search
+    }
   }
+
+  if (!query) return post;
 
   const searchResults = await searchSpotify(query, searchType, token);
 
-  if (!searchResults) return post;
-
-  let foundItem: SpotifyTrack | SpotifyAlbum | null = null;
   if (
     searchType === "track" && searchResults.tracks &&
     searchResults.tracks.items.length > 0
   ) {
-    // Add logic to pick the best match, e.g., exact title match, primary artist match
-    foundItem = searchResults.tracks.items[0] as SpotifyTrack; // Simplistic: take first result
-    if (foundItem) {
-      post.spotifyLink = foundItem.external_urls.spotify;
-      post.releaseDate = (foundItem as SpotifyTrack).album.release_date;
-      post.albumCoverUrl = (foundItem as SpotifyTrack).album.images?.[0]?.url;
+    const track = searchResults.tracks.items[0] as SpotifyTrack; // Assuming first result is best
+    post.artist = track.artists.map((a) => a.name).join(", ");
+    post.trackOrAlbumTitle = track.name;
+    post.releaseDate = track.album.release_date;
+    post.albumCoverUrl = track.album.images?.[0]?.url;
+    post.spotifyLink = track.external_urls.spotify;
+    post.featureType = track.album.album_type === "album" ? "album" : "track"; // Or map more granularly
 
-      // For track, get album details for producer info
-      const albumDetails = await getSpotifyAlbumDetails(
-        (foundItem as SpotifyTrack).album.id,
-        token,
-      );
-      if (albumDetails) {
-        post.producers = extractProducers(albumDetails);
-        if (!post.albumCoverUrl) {
-          post.albumCoverUrl = albumDetails.images?.[0]?.url; // Fallback cover
-        }
-        if (!post.releaseDate) post.releaseDate = albumDetails.release_date; // Fallback release date
+    // Fetch full album details for producers for this track's album
+    const albumDetails = await getSpotifyAlbumDetails(track.album.id, token);
+    if (albumDetails) {
+      post.producers = extractProducers(albumDetails);
+      if (!post.albumCoverUrl) {
+        post.albumCoverUrl = albumDetails.images?.[0]?.url; // Fallback if track album art missing
       }
     }
   } else if (
     searchType === "album" && searchResults.albums &&
     searchResults.albums.items.length > 0
   ) {
-    foundItem = searchResults.albums.items[0] as SpotifyAlbum; // Simplistic: take first result
-    if (foundItem) {
-      post.spotifyLink = foundItem.external_urls.spotify;
-      post.releaseDate = foundItem.release_date;
-      post.albumCoverUrl = foundItem.images?.[0]?.url;
-      // For album, producers can be extracted directly if logic is good
-      const albumDetails = await getSpotifyAlbumDetails(foundItem.id, token); // Re-fetch for full details if needed
-      if (albumDetails) {
-        post.producers = extractProducers(albumDetails);
-        // Override with potentially more detailed info
-        post.albumCoverUrl = albumDetails.images?.[0]?.url ||
-          post.albumCoverUrl;
-        post.releaseDate = albumDetails.release_date || post.releaseDate;
-      }
-    }
+    const album = searchResults.albums.items[0] as SpotifyAlbum; // Assuming first result is best
+    post.artist = album.artists.map((a) => a.name).join(", ");
+    post.trackOrAlbumTitle = album.name;
+    post.releaseDate = album.release_date;
+    post.albumCoverUrl = album.images?.[0]?.url;
+    post.spotifyLink = album.external_urls.spotify;
+    post.featureType = "album"; // Or map more granularly
+    post.producers = extractProducers(album);
   }
-
-  // TODO: Add Apple Music enrichment if needed (similar flow: auth, search, parse)
-  // This would involve using the Apple Music API.
-
-  // For description, Spotify API doesn't provide a good one.
-  // Could use the track/album name or leave for GPT.
-  // post.description = `Listen to ${post.trackOrAlbumTitle} by ${post.artist}.`;
 
   return post;
 }
 
-// TODO: Apple Music API integration would follow a similar pattern:
-// 1. Get Developer Token (can be generated and long-lived, or short-lived and refreshed)
-// 2. Search API: https://developer.apple.com/documentation/applemusicapi/search_for_catalog_resources
-// 3. Parse results for release date, artwork, etc. Producers are also hard to find.
+// Define Spotify API response types (simplified)
+// You might want to use a library or more detailed types for Spotify API
+namespace SpotifyApi {
+  export interface Image {
+    url: string;
+    height?: number;
+    width?: number;
+  }
+
+  export interface ExternalUrls {
+    spotify: string;
+  }
+
+  export interface Artist {
+    name: string;
+    external_urls: ExternalUrls;
+    id: string;
+  }
+
+  export interface AlbumBase {
+    id: string;
+    name: string;
+    album_type: string;
+    release_date: string;
+    images: Image[];
+    external_urls: ExternalUrls;
+    artists: Artist[];
+  }
+
+  export interface Track extends AlbumBase { // Track object often includes album info
+    album: AlbumBase;
+    popularity?: number;
+  }
+
+  export interface Album extends AlbumBase {
+    label?: string;
+    copyrights?: { text: string; type: string }[];
+  }
+
+  export interface SearchResponse {
+    tracks?: { items: Track[] };
+    albums?: { items: Album[] };
+  }
+}
