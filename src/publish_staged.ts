@@ -3,12 +3,12 @@ import { config } from "./config.ts";
 import { loadStagedPosts, savePostsToStage } from "../lib/data_store.ts";
 import { createWordPressPost } from "../lib/wordpress_client.ts";
 import type { ProcessedRedditPost } from "../lib/reddit_client.ts";
-import { Input } from "https://deno.land/x/cliffy@v1.0.0-rc.3/prompt/mod.ts"; // Using Cliffy for better prompts
+import { Input } from "cliffy";
 
 async function main() {
   console.log("Starting Staged Post Publisher...");
 
-  let stagedPosts = await loadStagedPosts();
+  let stagedPosts = loadStagedPosts();
 
   if (stagedPosts.length === 0) {
     console.log("No posts currently in the staging area.");

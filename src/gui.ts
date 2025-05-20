@@ -1,9 +1,9 @@
-import { Webview } from "jsr:@webview/webview";
+import { Webview } from "@webview/webview";
 import { config } from "./config.ts";
 import { loadStagedPosts, savePostsToStage } from "../lib/data_store.ts";
 import { createWordPressPost } from "../lib/wordpress_client.ts";
 import type { ProcessedRedditPost } from "../lib/reddit_client.ts";
-import { runPipeline as runMainPipelineInternal } from "./main.ts"; // Import the pipeline function
+import { runPipeline as runFetchAndStageProcess } from "./fetch_service.ts"; // Import the pipeline function
 
 const html = `
   <html>
@@ -46,9 +46,9 @@ const html = `
   <body>
     <h1>Reddit to WordPress Pipeline Control</h1>
     
-    <button onclick="window.handleRunPipeline()">Run Reddit Fetch Pipeline</button>
-    <button onclick="window.refreshPostsUI()">Refresh Staged Posts</button>
-    <button onclick="window.handlePublishAction()">Publish Selected Posts</button>
+    <button onclick="window.handleFetchAction()">Fetch New Posts</button>
+    <button onclick="window.refreshPostsUI()">Refresh Staged View</button>
+    <button onclick="window.handlePublishDraftsAction()">Publish Selected as Drafts</button>
 
     <h2>Staged Posts</h2>
     <div id="stagedPostsArea">
@@ -72,21 +72,21 @@ const html = `
         }
       }
 
-      window.handleRunPipeline = async function() {
-        console.log('handleRunPipeline called');
-        window.updateStatus('Starting pipeline execution...');
+      window.handleFetchAction = async function() {
+        console.log('handleFetchAction called');
+        window.updateStatus('Starting to fetch new posts...');
         try {
-          console.log('Calling bound Deno function: runMainPipeline...');
-          const result = await runMainPipeline(); 
-          console.log('runMainPipeline returned:', result);
-          window.updateStatus(\`Pipeline: \${result}\`);
+          console.log('Calling bound Deno function: fetchAndStagePosts...');
+          const result = await fetchAndStagePosts(); 
+          console.log('fetchAndStagePosts returned:', result);
+          window.updateStatus(\`Fetch: \${result}\`);
           if (result && typeof result === 'string' && result.includes('successfully')) {
-            window.refreshPostsUI();
+            window.refreshPostsUI(); // Refresh after successful fetch
           }
         } catch (e) {
-          console.error('Error in handleRunPipeline:', e);
+          console.error('Error in handleFetchAction:', e);
           const errorMessage = e instanceof Error ? e.message : String(e);
-          window.updateStatus(\`Error running pipeline: \${errorMessage}\`, true);
+          window.updateStatus(\`Error fetching posts: \${errorMessage}\`, true);
         }
       }
 
@@ -139,8 +139,8 @@ const html = `
         }
       }
 
-      window.handlePublishAction = async function() {
-        console.log('handlePublishAction called');
+      window.handlePublishDraftsAction = async function() {
+        console.log('handlePublishDraftsAction called');
         const selectedPostIds = [];
         document.querySelectorAll('#stagedPostsArea input[type="checkbox"]:checked').forEach(checkbox => {
           // Removed 'as HTMLInputElement' as it's TypeScript syntax
@@ -152,19 +152,19 @@ const html = `
           return;
         }
 
-        window.updateStatus(\`Publishing \${selectedPostIds.length} post(s)...\`);
+        window.updateStatus(\`Publishing \${selectedPostIds.length} post(s) as drafts...\`);
         try {
-          console.log('Calling bound Deno function: publishPosts with IDs:', selectedPostIds);
-          const result = await publishPosts(selectedPostIds); 
-          console.log('publishPosts returned:', result);
+          console.log('Calling bound Deno function: publishStagedPostsAsDrafts with IDs:', selectedPostIds);
+          const result = await publishStagedPostsAsDrafts(selectedPostIds); 
+          console.log('publishStagedPostsAsDrafts returned:', result);
           // Assuming result has a message property, based on previous Deno function structure
           const resultMessage = typeof result === 'string' ? result : (result && result.message) || "Publish action complete.";
           window.updateStatus(resultMessage);
           window.refreshPostsUI(); // Refresh the list
         } catch (e) {
-          console.error('Error in handlePublishAction:', e);
+          console.error('Error in handlePublishDraftsAction:', e);
           const errorMessage = e instanceof Error ? e.message : String(e);
-          window.updateStatus(\`Error publishing posts: \${errorMessage}\`, true);
+          window.updateStatus(\`Error publishing drafts: \${errorMessage}\`, true);
         }
       }
 
@@ -191,16 +191,16 @@ const html = `
   </html>
 `;
 
-async function runMainPipeline(): Promise<string> {
+async function fetchAndStagePosts(): Promise<string> {
   try {
-    console.log("GUI: Triggering main pipeline directly...");
-    await runMainPipelineInternal(); // Call the imported function
-    console.log("GUI: Main pipeline completed successfully (called directly).");
-    return "Pipeline completed successfully.";
+    console.log("GUI: Triggering fetch and stage process (main pipeline)...");
+    await runFetchAndStageProcess(); // This is the imported main pipeline function
+    console.log("GUI: Fetch and stage process completed successfully.");
+    return "Fetch and stage process completed successfully.";
   } catch (e: unknown) {
     const error = e as Error;
-    console.error("GUI: Error running main pipeline directly:", error);
-    return `Error running pipeline: ${error.message}`;
+    console.error("GUI: Error during fetch and stage process:", error);
+    return `Error in fetch and stage: ${error.message}`;
   }
 }
 
@@ -217,11 +217,15 @@ function getStagedPosts(): ProcessedRedditPost[] {
   }
 }
 
-async function publishPosts(postIds: string[]): Promise<{ message: string }> {
+async function publishStagedPostsAsDrafts(
+  postIds: string[],
+): Promise<{ message: string }> {
   if (!postIds || postIds.length === 0) {
     return { message: "No post IDs provided for publishing." };
   }
-  console.log(`GUI: Received request to publish posts: ${postIds.join(", ")}`);
+  console.log(
+    `GUI: Received request to publish posts as drafts: ${postIds.join(", ")}`,
+  );
 
   const stagedPosts = loadStagedPosts(); // Assumes CWD is project root
   const postsToPublish: ProcessedRedditPost[] = [];
@@ -251,22 +255,25 @@ async function publishPosts(postIds: string[]): Promise<{ message: string }> {
   const successfullyPublishedIds: string[] = [];
 
   for (const post of postsToPublish) {
-    console.log(`GUI: Publishing "\${post.title}"...`);
+    console.log(`GUI: Publishing "\${post.title}" as draft...`);
     try {
       const success = await createWordPressPost(post, authTokenBase64); // Assumes CWD is project root for any path resolutions within
       if (success) {
-        console.log(`GUI: Successfully published "${post.title}".`);
+        console.log(`GUI: Successfully published "${post.title}" as draft.`);
         successfullyPublishedIds.push(post.id);
         successCount++;
       } else {
         console.error(
-          `GUI: Failed to publish "${post.title}". It will remain staged.`,
+          `GUI: Failed to publish "${post.title}" as draft. It will remain staged.`,
         );
         failureCount++;
       }
     } catch (e: unknown) {
       const error = e as Error;
-      console.error(`GUI: Error during publishing of "${post.title}":`, error);
+      console.error(
+        `GUI: Error during publishing of "${post.title}" as draft:`,
+        error,
+      );
       failureCount++;
     }
   }
@@ -280,15 +287,15 @@ async function publishPosts(postIds: string[]): Promise<{ message: string }> {
 
   return {
     message:
-      `Publishing complete. ${successCount} succeeded, ${failureCount} failed.`,
+      `Publishing drafts complete. ${successCount} succeeded, ${failureCount} failed.`,
   };
 }
 
-const webview = new Webview(true);
+const webview = new Webview();
 
-webview.bind("runMainPipeline", runMainPipeline);
+webview.bind("fetchAndStagePosts", fetchAndStagePosts);
 webview.bind("getStagedPosts", getStagedPosts);
-webview.bind("publishPosts", publishPosts);
+webview.bind("publishStagedPostsAsDrafts", publishStagedPostsAsDrafts);
 
 webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
 webview.title = "Khiphop Pipeline Manager";

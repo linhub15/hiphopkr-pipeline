@@ -43,7 +43,9 @@ async function getSpotifyToken(): Promise<string | null> {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${btoa(`${config.spotify.clientId}:${config.spotify.clientSecret}`)}`,
+        "Authorization": `Basic ${
+          btoa(`${config.spotify.clientId}:${config.spotify.clientSecret}`)
+        }`,
       },
       body: "grant_type=client_credentials",
     });

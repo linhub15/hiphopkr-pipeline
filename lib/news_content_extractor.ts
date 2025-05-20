@@ -1,7 +1,5 @@
 // news_content_extractor.ts
 import type { ProcessedRedditPost } from "./reddit_client.ts";
-// You might need an HTML parser if fetching content from external links
-// Example: import { DOMParser } from "https://deno.land/x/deno_dom/deno-dom-wasm.ts";
 
 export async function extractNewsContent(
   post: ProcessedRedditPost,
@@ -27,7 +25,7 @@ export async function extractNewsContent(
       console.log(`Workspaceing external content for news: ${post.sourceUrl}`);
       const response = await fetch(post.sourceUrl, {
         headers: {
-          "User-Agent": "KhiphopPipelineBot/1.0 (+https://yourcontactinfo.com)",
+          "User-Agent": "KhiphopPipelineBot/1.0 (+https://hiphopkr.com)",
         }, // Be a good bot
       });
       if (

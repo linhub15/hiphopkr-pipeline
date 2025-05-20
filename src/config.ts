@@ -1,5 +1,5 @@
 // config.ts
-import { load } from "std/dotenv";
+import { load } from "@std/dotenv";
 
 await load({ export: true }); // Exports .env variables to Deno.env
 

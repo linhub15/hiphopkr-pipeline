@@ -60,19 +60,27 @@ export async function saveProcessedPostId(postId: string): Promise<void> {
  * @returns An array of ProcessedRedditPost.
  */
 export function loadStagedPosts(): ProcessedRedditPost[] {
-  console.log("[data_store] loadStagedPosts: Starting to load staged posts directly.");
+  console.log(
+    "[data_store] loadStagedPosts: Starting to load staged posts directly.",
+  );
   try {
     const fileContent = Deno.readTextFileSync(STAGING_PATH);
     if (fileContent.trim() === "") {
-      console.log("[data_store] loadStagedPosts: Staging file is empty. Successfully loaded 0 posts.");
+      console.log(
+        "[data_store] loadStagedPosts: Staging file is empty. Successfully loaded 0 posts.",
+      );
       return []; // Handle empty file
     }
     const posts = JSON.parse(fileContent) as ProcessedRedditPost[];
-    console.log(`[data_store] loadStagedPosts: Successfully loaded and parsed ${posts.length} staged posts.`);
+    console.log(
+      `[data_store] loadStagedPosts: Successfully loaded and parsed ${posts.length} staged posts.`,
+    );
     return posts;
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
-      console.log(`[data_store] loadStagedPosts: Staging file (${STAGING_PATH}) not found. Returning empty array.`);
+      console.log(
+        `[data_store] loadStagedPosts: Staging file (${STAGING_PATH}) not found. Returning empty array.`,
+      );
       return []; // File doesn't exist, return empty array
     }
     console.error(
@@ -109,7 +117,7 @@ export async function savePostsToStage(
  */
 export async function addPostToStage(post: ProcessedRedditPost): Promise<void> {
   const stagedPosts = loadStagedPosts(); // Removed await
-  
+
   if (stagedPosts.some((p) => p.id === post.id)) {
     // console.log(`Post ${post.id} already in staging area. Skipping.`); // Re-commented, was likely intentional user log
     return;

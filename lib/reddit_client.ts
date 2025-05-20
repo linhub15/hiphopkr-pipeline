@@ -1,6 +1,6 @@
 // reddit_client.ts
 import { config } from "../src/config.ts";
-import { ensureDir } from "std/fs";
+import { ensureDir } from "@std/fs";
 // Ensure ProcessedRedditPost has a reliable `id` field.
 // The existing `id: data.permalink.split('/')[4] || Date.now().toString()` should work,
 // but using data.id (which is Reddit's internal base36 ID like `1abcde`) would be more standard if available directly,
@@ -186,7 +186,8 @@ function extractArtistAndTitle(
   title: string,
   featureType?: ProcessedRedditPost["featureType"],
 ): { artist?: string; trackOrAlbumTitle?: string } {
-  let artist, trackOrAlbumTitle;
+  let artist: string | undefined = undefined;
+  let trackOrAlbumTitle: string | undefined = undefined;
   const patterns = [
     /^(.*?)\s*-\s*(.*?)(?:\s*\[(.*?)\])?(?:\s*\(feat\.(.*?)\))?$/,
   ];
