@@ -46,9 +46,9 @@ const html = `
   <body>
     <h1>Reddit to WordPress Pipeline Control</h1>
     
-    <button onclick="handleRunPipeline()">Run Reddit Fetch Pipeline</button>
-    <button onclick="refreshPostsUI()">Refresh Staged Posts</button>
-    <button onclick="handlePublishAction()">Publish Selected Posts</button>
+    <button onclick="window.handleRunPipeline()">Run Reddit Fetch Pipeline</button>
+    <button onclick="window.refreshPostsUI()">Refresh Staged Posts</button>
+    <button onclick="window.handlePublishAction()">Publish Selected Posts</button>
 
     <h2>Staged Posts</h2>
     <div id="stagedPostsArea">
@@ -58,42 +58,56 @@ const html = `
     <div id="statusBar">Status: Idle</div>
 
     <script>
-      const statusBar = document.getElementById('statusBar');
+      // const statusBar = document.getElementById('statusBar'); // We will get it inside updateStatus
 
-      function updateStatus(message, isError = false) {
-        statusBar.textContent = \`Status: \${message}\`;
-        statusBar.style.color = isError ? 'red' : 'black';
-      }
-
-      async function handleRunPipeline() {
-        updateStatus('Starting pipeline execution...');
-        try {
-          // Directly call the bound Deno function
-          const result = await runMainPipeline(); 
-          updateStatus(\`Pipeline: \${result}\`);
-          if (result.includes('successfully')) {
-            refreshPostsUI(); // Auto-refresh on success
-          }
-        } catch (e) {
-          const error = e as Error;
-          console.error('Error running pipeline:', error);
-          updateStatus(\`Error running pipeline: \${error.message || String(error)}\`, true);
+      window.updateStatus = function(message, isError = false) {
+        console.log(\`updateStatus called with: "\${message}", isError: \${isError}\`);
+        const statusBarEl = document.getElementById('statusBar');
+        if (statusBarEl) {
+          statusBarEl.textContent = \`Status: \${message}\`;
+          statusBarEl.style.color = isError ? 'red' : 'black';
+          console.log(\`statusBar textContent set to: "Status: \${message}"\`);
+        } else {
+          console.error("statusBar element not found!");
         }
       }
 
-      async function refreshPostsUI() {
-        updateStatus('Loading staged posts...');
+      window.handleRunPipeline = async function() {
+        console.log('handleRunPipeline called');
+        window.updateStatus('Starting pipeline execution...');
         try {
-          // Directly call the bound Deno function
+          console.log('Calling bound Deno function: runMainPipeline...');
+          const result = await runMainPipeline(); 
+          console.log('runMainPipeline returned:', result);
+          window.updateStatus(\`Pipeline: \${result}\`);
+          if (result && typeof result === 'string' && result.includes('successfully')) {
+            window.refreshPostsUI();
+          }
+        } catch (e) {
+          console.error('Error in handleRunPipeline:', e);
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          window.updateStatus(\`Error running pipeline: \${errorMessage}\`, true);
+        }
+      }
+
+      window.refreshPostsUI = async function() {
+        console.log('refreshPostsUI called');
+        window.updateStatus('Loading staged posts...');
+        try {
+          console.log('Calling bound Deno function: getStagedPosts...');
           const posts = await getStagedPosts(); 
+          console.log('getStagedPosts returned:', posts ? posts.length : 'null/undefined');
           const area = document.getElementById('stagedPostsArea');
+          if (!area) {
+            console.error("stagedPostsArea element not found!");
+            window.updateStatus("Error: UI area for posts not found.", true);
+            return;
+          }
           area.innerHTML = ''; // Clear previous posts
           if (posts && posts.length > 0) {
             posts.forEach(post => {
               const postDiv = document.createElement('div');
               postDiv.className = 'post-item';
-              // Sanitize post content if it's directly from an external source and rendered as HTML
-              // For now, assuming title, featureType, artist are safe.
               postDiv.innerHTML = \`
                 <input type="checkbox" data-post-id="\${post.id}" />
                 <div>
@@ -102,40 +116,55 @@ const html = `
                 </div>
               \`;
               area.appendChild(postDiv);
+
+              const checkbox = postDiv.querySelector('input[type="checkbox"]');
+              const titleElement = postDiv.querySelector('strong');
+
+              if (checkbox && titleElement) {
+                titleElement.style.cursor = 'pointer'; // Add visual cue
+                titleElement.addEventListener('click', () => {
+                  checkbox.checked = !checkbox.checked;
+                });
+              }
             });
-            updateStatus(\`Loaded \${posts.length} staged posts.\`);
+            window.updateStatus(\`Loaded \${posts.length} staged posts.\`);
           } else {
             area.innerHTML = '<p>No posts in staging area.</p>';
-            updateStatus('No posts in staging area.');
+            window.updateStatus('No posts in staging area.');
           }
         } catch (e) {
-          const error = e as Error;
-          console.error('Error loading staged posts:', error);
-          updateStatus(\`Error loading staged posts: \${error.message || String(error)}\`, true);
+          console.error('Error in refreshPostsUI:', e);
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          window.updateStatus(\`Error loading staged posts: \${errorMessage}\`, true);
         }
       }
 
-      async function handlePublishAction() {
+      window.handlePublishAction = async function() {
+        console.log('handlePublishAction called');
         const selectedPostIds = [];
         document.querySelectorAll('#stagedPostsArea input[type="checkbox"]:checked').forEach(checkbox => {
-          selectedPostIds.push((checkbox as HTMLInputElement).dataset.postId);
+          // Removed 'as HTMLInputElement' as it's TypeScript syntax
+          selectedPostIds.push(checkbox.dataset.postId); 
         });
 
         if (selectedPostIds.length === 0) {
-          updateStatus('No posts selected for publishing.', true);
+          window.updateStatus('No posts selected for publishing.', true);
           return;
         }
 
-        updateStatus(\`Publishing \${selectedPostIds.length} post(s)...\`);
+        window.updateStatus(\`Publishing \${selectedPostIds.length} post(s)...\`);
         try {
-          // Directly call the bound Deno function
+          console.log('Calling bound Deno function: publishPosts with IDs:', selectedPostIds);
           const result = await publishPosts(selectedPostIds); 
-          updateStatus(result.message);
-          refreshPostsUI(); // Refresh the list
+          console.log('publishPosts returned:', result);
+          // Assuming result has a message property, based on previous Deno function structure
+          const resultMessage = typeof result === 'string' ? result : (result && result.message) || "Publish action complete.";
+          window.updateStatus(resultMessage);
+          window.refreshPostsUI(); // Refresh the list
         } catch (e) {
-          const error = e as Error;
-          console.error('Error publishing posts:', error);
-          updateStatus(\`Error publishing posts: \${error.message || String(error)}\`, true);
+          console.error('Error in handlePublishAction:', e);
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          window.updateStatus(\`Error publishing posts: \${errorMessage}\`, true);
         }
       }
 
@@ -144,13 +173,18 @@ const html = `
         // Check if a bound function (e.g., getStagedPosts) is available
         if (typeof getStagedPosts === 'function') { 
           console.log('WebView bridge (bound functions) ready, loading initial posts.');
-          refreshPostsUI();
+          console.log('Before calling refreshPostsUI, typeof window.refreshPostsUI:', typeof window.refreshPostsUI); // Diagnostic log
+          if (typeof window.refreshPostsUI === 'function') {
+            window.refreshPostsUI(); 
+          } else {
+            console.error('window.refreshPostsUI is NOT a function just before call in tryInitialLoad. Value:', window.refreshPostsUI);
+          }
         } else {
           console.log('WebView bridge (bound functions) not ready, retrying initial load in 100ms...');
           setTimeout(tryInitialLoad, 100);
         }
       }
-      window.onload = tryInitialLoad;
+      tryInitialLoad(); // Call it directly at the end of the script.
 
     </script>
   </body>
@@ -170,11 +204,10 @@ async function runMainPipeline(): Promise<string> {
   }
 }
 
-async function getStagedPosts(): Promise<ProcessedRedditPost[]> {
+function getStagedPosts(): ProcessedRedditPost[] {
   try {
     console.log("GUI: Loading staged posts...");
-    // Assumes gui.ts is run from project root, so config paths are relative to it.
-    const posts = await loadStagedPosts();
+    const posts = loadStagedPosts();
     console.log(`GUI: Loaded ${posts.length} staged posts.`);
     return posts;
   } catch (e: unknown) {
@@ -190,7 +223,7 @@ async function publishPosts(postIds: string[]): Promise<{ message: string }> {
   }
   console.log(`GUI: Received request to publish posts: ${postIds.join(", ")}`);
 
-  const stagedPosts = await loadStagedPosts(); // Assumes CWD is project root
+  const stagedPosts = loadStagedPosts(); // Assumes CWD is project root
   const postsToPublish: ProcessedRedditPost[] = [];
   const remainingStagedPostsAfterSelection = [...stagedPosts];
 
@@ -251,7 +284,7 @@ async function publishPosts(postIds: string[]): Promise<{ message: string }> {
   };
 }
 
-const webview = new Webview();
+const webview = new Webview(true);
 
 webview.bind("runMainPipeline", runMainPipeline);
 webview.bind("getStagedPosts", getStagedPosts);
