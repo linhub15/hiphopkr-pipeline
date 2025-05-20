@@ -46,7 +46,6 @@ export async function saveProcessedPostId(postId: string): Promise<void> {
       PROCESSED_IDS_PATH,
       JSON.stringify(idsArray, null, 2),
     );
-    // console.log(`Saved post ID ${postId} to ${PROCESSED_IDS_PATH}`);
   } catch (error) {
     console.error(
       `Error writing processed post ID to file (${PROCESSED_IDS_PATH}):`,
@@ -101,7 +100,6 @@ export async function savePostsToStage(
 ): Promise<void> {
   try {
     await Deno.writeTextFile(STAGING_PATH, JSON.stringify(posts, null, 2));
-    // console.log(`Saved ${posts.length} posts to staging area: ${STAGING_PATH}`); // Re-commented, was likely intentional user log
   } catch (error) {
     console.error(
       `Error writing posts to staging file (${STAGING_PATH}):`,
@@ -119,23 +117,8 @@ export async function addPostToStage(post: ProcessedRedditPost): Promise<void> {
   const stagedPosts = loadStagedPosts(); // Removed await
 
   if (stagedPosts.some((p) => p.id === post.id)) {
-    // console.log(`Post ${post.id} already in staging area. Skipping.`); // Re-commented, was likely intentional user log
     return;
   }
   stagedPosts.push(post);
   await savePostsToStage(stagedPosts);
 }
-
-/**
- * (Optional) If you want to store the full enriched post data locally.
- * For now, we are only storing IDs for deduplication.
- */
-// export async function saveEnrichedPostData(posts: ProcessedRedditPost[]): Promise<void> {
-//   const filePath = "./enriched_data_log.json"; // Or a different file per run
-//   try {
-//     await Deno.writeTextFile(filePath, JSON.stringify(posts, null, 2));
-//     console.log(`Full enriched data saved to ${filePath}`);
-//   } catch (error) {
-//     console.error(`Error saving full enriched data:`, error);
-//   }
-// }

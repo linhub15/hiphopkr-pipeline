@@ -2,4 +2,5 @@ debug_markdown_posts
 out
 tmp
 .env
+.env.prod
 processed_post_ids.json

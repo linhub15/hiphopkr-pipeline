@@ -3,7 +3,7 @@
     "start": "deno run --allow-net --allow-env --allow-read --allow-write src/main.ts",
     "publish": "deno run --allow-net --allow-env --allow-read --allow-write src/publish_staged.ts",
     "gui": "deno run --allow-net --allow-env --allow-read --allow-write --allow-ffi src/gui.ts",
-    "build": "deno compile --allow-net --allow-env --allow-read --allow-write --allow-ffi --output=./out/hiphopkr-pipeline src/gui.ts"
+    "build": "deno compile --allow-net --allow-env --allow-read --allow-write --allow-ffi --include .env --output=./out/hiphopkr-pipeline src/gui.ts"
   },
   "imports": {
     "@std/dotenv": "jsr:@std/dotenv@^0.225.4",

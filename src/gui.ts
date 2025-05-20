@@ -1,5 +1,5 @@
-import { Webview } from "@webview/webview";
-import { config } from "./config.ts";
+import { Webview } from "jsr:@webview/webview";
+import { config, getConfig, saveConfig } from "./config.ts";
 import { loadStagedPosts, savePostsToStage } from "../lib/data_store.ts";
 import { createWordPressPost } from "../lib/wordpress_client.ts";
 import type { ProcessedRedditPost } from "../lib/reddit_client.ts";
@@ -10,55 +10,130 @@ const html = `
   <head>
     <title>Reddit to WordPress Pipeline</title>
     <style>
-      body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-      h1, h2 { color: #333; }
-      button { 
-        padding: 10px 15px; 
-        margin-bottom: 10px; 
+      body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; height: 100vh; }
+      #appContainer { display: flex; flex-direction: column; flex-grow: 1; }
+      #navBar { display: flex; background-color: #333; padding: 0 10px; }
+      .nav-button {
+        padding: 10px 15px;
+        margin: 5px 2px;
+        background-color: #555;
+        color: white;
+        border: none;
+        border-radius: 3px 3px 0 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .nav-button:hover { background-color: #777; }
+      .nav-button.active-nav { background-color: #007bff; color: white; }
+      .nav-button svg { width: 16px; height: 16px; fill: currentColor; }
+
+      #contentArea { padding: 20px; flex-grow: 1; overflow-y: auto; }
+      #mainAppView, #configView { /* Common styles for views if any, specific display handled by JS */ }
+      
+      h1, h2 { color: #333; margin-top: 0; }
+      button { /* General button styles - keep or refine */
+        padding: 10px 15px;
+        margin-bottom: 10px;
         margin-right: 5px;
-        background-color: #007bff; 
-        color: white; 
-        border: none; 
-        border-radius: 5px; 
-        cursor: pointer; 
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
       }
       button:hover { background-color: #0056b3; }
-      #stagedPostsArea { 
-        margin-top: 20px; 
-        border: 1px solid #ccc; 
-        padding: 10px; 
-        min-height: 200px; 
+      #stagedPostsArea {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 200px;
         background-color: #fff;
         border-radius: 5px;
       }
-      .post-item { 
-        margin-bottom: 8px; 
-        padding: 8px; 
-        border-bottom: 1px solid #eee; 
+      .post-item {
+        margin-bottom: 8px;
+        padding: 8px;
+        border-bottom: 1px solid #eee;
         display: flex;
         align-items: center;
       }
       .post-item:last-child { border-bottom: none; }
       .post-item input[type="checkbox"] { margin-right: 10px; }
       #statusBar { margin-top: 15px; padding: 10px; background-color: #e9ecef; border-radius: 5px; }
+      
+      .config-form-area { /* Style for the config form itself, now within #configView */
+        padding: 15px; 
+        background-color: #fff; 
+        border: 1px solid #ccc; 
+        border-radius: 5px;
+      }
+      .config-form-area label { display: block; margin-bottom: 5px; font-weight: bold; }
+      .config-form-area input[type="text"], .config-form-area input[type="password"] { width: 95%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
   </head>
   <body>
-    <h1>Reddit to WordPress Pipeline Control</h1>
-    
-    <button onclick="window.handleFetchAction()">Fetch New Posts</button>
-    <button onclick="window.refreshPostsUI()">Refresh Staged View</button>
-    <button onclick="window.handlePublishDraftsAction()">Publish Selected as Drafts</button>
+    <div id="appContainer">
+      <nav id="navBar">
+        <button id="showMainAppBtn" class="nav-button active-nav">Home</button>
+        <button id="showConfigBtn" class="nav-button">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19.14,12.74a2,2,0,0,0-2.48,0L15.2,14.21a2,2,0,0,0,0,2.82l1.47,1.47a2,2,0,0,0,2.82,0l1.47-1.47a2,2,0,0,0,0-2.82ZM12,10.11a2,2,0,0,0-1.41.59L9.17,12.11a2,2,0,0,0,0,2.82l1.42,1.42a2,2,0,0,0,2.82,0l1.41-1.41a2,2,0,0,0,0-2.82ZM22,10.5A10.5,10.5,0,1,0,11.5,21,10.5,10.5,0,0,0,22,10.5Zm-2,0a8.5,8.5,0,1,1-8.5-8.5A8.5,8.5,0,0,1,20,10.5Z"/></svg>
+          Config
+        </button>
+      </nav>
+      <div id="contentArea">
+        <div id="mainAppView">
+          <h1>Reddit to WordPress Pipeline Control</h1>
+          <button onclick="window.handleFetchAction()">Fetch New Posts</button>
+          <button onclick="window.refreshPostsUI()">Refresh Staged View</button>
+          <button onclick="window.handlePublishDraftsAction()">Publish Selected as Drafts</button>
+          <h2>Staged Posts</h2>
+          <div id="stagedPostsArea">
+            <p>Click "Refresh Staged Posts" to load.</p>
+          </div>
+          <div id="statusBar">Status: Idle</div>
+        </div>
 
-    <h2>Staged Posts</h2>
-    <div id="stagedPostsArea">
-      <p>Click "Refresh Staged Posts" to load.</p>
+        <div id="configView" style="display: none;">
+          <div class="config-form-area">
+            <h2>Setup Configuration</h2>
+            <p>Please provide the necessary API keys and credentials. These will be saved to a <code>.env</code> file in the project root.</p>
+            <label for="spotifyClientId">Spotify Client ID:</label>
+            <input type="text" id="spotifyClientId" name="spotifyClientId" />
+            <label for="spotifyClientSecret">Spotify Client Secret:</label>
+            <input type="text" id="spotifyClientSecret" name="spotifyClientSecret" />
+            <label for="wordpressEndpoint">WordPress Endpoint URL:</label>
+            <input type="text" id="wordpressEndpoint" name="wordpressEndpoint" />
+            <label for="wordpressUsername">WordPress Username:</label>
+            <input type="text" id="wordpressUsername" name="wordpressUsername" />
+            <label for="wordpressPassword">WordPress Password:</label>
+            <input type="password" id="wordpressPassword" name="wordpressPassword" />
+            <label for="openaiApiKey">OpenAI API Key (Optional):</label>
+            <input type="text" id="openaiApiKey" name="openaiApiKey" />
+            <button onclick="window.saveConfiguration()">Save Configuration</button>
+            <div id="configSaveStatus"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    
-    <div id="statusBar">Status: Idle</div>
 
     <script>
       // const statusBar = document.getElementById('statusBar'); // We will get it inside updateStatus
+
+      window.showMainAppView = function() {
+        document.getElementById('mainAppView').style.display = 'block';
+        document.getElementById('configView').style.display = 'none';
+        document.getElementById('showMainAppBtn').classList.add('active-nav');
+        document.getElementById('showConfigBtn').classList.remove('active-nav');
+      }
+
+      window.showConfigView = function() {
+        document.getElementById('mainAppView').style.display = 'none';
+        document.getElementById('configView').style.display = 'block';
+        document.getElementById('showMainAppBtn').classList.remove('active-nav');
+        document.getElementById('showConfigBtn').classList.add('active-nav');
+      }
 
       window.updateStatus = function(message, isError = false) {
         console.log(\`updateStatus called with: "\${message}", isError: \${isError}\`);
@@ -77,7 +152,7 @@ const html = `
         window.updateStatus('Starting to fetch new posts...');
         try {
           console.log('Calling bound Deno function: fetchAndStagePosts...');
-          const result = await fetchAndStagePosts(); 
+          const result = await window.fetchAndStagePosts(); 
           console.log('fetchAndStagePosts returned:', result);
           window.updateStatus(\`Fetch: \${result}\`);
           if (result && typeof result === 'string' && result.includes('successfully')) {
@@ -91,11 +166,10 @@ const html = `
       }
 
       window.refreshPostsUI = async function() {
-        console.log('refreshPostsUI called');
         window.updateStatus('Loading staged posts...');
         try {
           console.log('Calling bound Deno function: getStagedPosts...');
-          const posts = await getStagedPosts(); 
+          const posts = await window.getStagedPosts(); 
           console.log('getStagedPosts returned:', posts ? posts.length : 'null/undefined');
           const area = document.getElementById('stagedPostsArea');
           if (!area) {
@@ -143,7 +217,6 @@ const html = `
         console.log('handlePublishDraftsAction called');
         const selectedPostIds = [];
         document.querySelectorAll('#stagedPostsArea input[type="checkbox"]:checked').forEach(checkbox => {
-          // Removed 'as HTMLInputElement' as it's TypeScript syntax
           selectedPostIds.push(checkbox.dataset.postId); 
         });
 
@@ -155,9 +228,8 @@ const html = `
         window.updateStatus(\`Publishing \${selectedPostIds.length} post(s) as drafts...\`);
         try {
           console.log('Calling bound Deno function: publishStagedPostsAsDrafts with IDs:', selectedPostIds);
-          const result = await publishStagedPostsAsDrafts(selectedPostIds); 
+          const result = await window.publishStagedPostsAsDrafts(selectedPostIds); 
           console.log('publishStagedPostsAsDrafts returned:', result);
-          // Assuming result has a message property, based on previous Deno function structure
           const resultMessage = typeof result === 'string' ? result : (result && result.message) || "Publish action complete.";
           window.updateStatus(resultMessage);
           window.refreshPostsUI(); // Refresh the list
@@ -168,23 +240,102 @@ const html = `
         }
       }
 
-      // Initial load of staged posts when the GUI starts
       function tryInitialLoad() {
-        // Check if a bound function (e.g., getStagedPosts) is available
-        if (typeof getStagedPosts === 'function') { 
-          console.log('WebView bridge (bound functions) ready, loading initial posts.');
-          console.log('Before calling refreshPostsUI, typeof window.refreshPostsUI:', typeof window.refreshPostsUI); // Diagnostic log
-          if (typeof window.refreshPostsUI === 'function') {
-            window.refreshPostsUI(); 
-          } else {
-            console.error('window.refreshPostsUI is NOT a function just before call in tryInitialLoad. Value:', window.refreshPostsUI);
-          }
+        // Ensure all critical Deno-bound functions for initialization are ready
+        if (typeof window.getStagedPosts === 'function' && 
+            typeof window.checkInitialConfig === 'function' &&
+            typeof window.getAllConfigValues === 'function') { 
+          console.log('WebView bridge (bound functions) ready for initial load.');
+          window.checkInitialConfig(); 
         } else {
-          console.log('WebView bridge (bound functions) not ready, retrying initial load in 100ms...');
+          console.log('WebView bridge (bound functions) not fully ready, retrying initial load in 100ms...');
           setTimeout(tryInitialLoad, 100);
         }
       }
-      tryInitialLoad(); // Call it directly at the end of the script.
+
+      window.saveConfiguration = async function() {
+        const configData = {
+          SPOTIFY_CLIENT_ID: document.getElementById('spotifyClientId')['value'],
+          SPOTIFY_CLIENT_SECRET: document.getElementById('spotifyClientSecret')['value'],
+          WORDPRESS_ENDPOINT: document.getElementById('wordpressEndpoint')['value'],
+          WORDPRESS_USERNAME: document.getElementById('wordpressUsername')['value'],
+          WORDPRESS_PASSWORD: document.getElementById('wordpressPassword')['value'],
+          OPENAI_API_KEY: document.getElementById('openaiApiKey')['value'],
+        };
+        const configSaveStatus = document.getElementById('configSaveStatus');
+        try {
+          configSaveStatus.textContent = 'Saving...';
+          const saveToEnvResult = await window.saveConfig(configData);
+          configSaveStatus.textContent = saveToEnvResult.message;
+
+          if (saveToEnvResult.success) {            
+            configSaveStatus.style.color = 'green';
+            window.showMainAppView(); 
+            window.updateStatus('Configuration saved. Values active immediately.');
+          } else {
+            configSaveStatus.style.color = 'red';
+          }
+        } catch (e) {
+          const err = e instanceof Error ? e : new Error(String(e));
+          configSaveStatus.textContent = \`Error saving: \${err.message}\`;
+          configSaveStatus.style.color = 'red';
+        }
+      };
+
+      window.checkInitialConfig = async function() {
+        console.log("Checking initial configuration by fetching directly from backend (synchronously)...");
+        let configValues = {};
+        let source = '';
+
+        try {
+            configValues = await window.getAllConfigValues();
+            source = 'Deno backend (direct load)';
+            console.log("Fetched configuration directly from Deno backend:", configValues);
+        } catch (e) {
+            console.error("Error fetching config from Deno backend:", e);
+        }
+        
+        const missingKeys = [];
+        const essentialKeys = ['SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET', 'WORDPRESS_ENDPOINT', 'WORDPRESS_USERNAME', 'WORDPRESS_PASSWORD'];
+        for (const key of essentialKeys) {
+            if (!configValues[key]) { 
+                missingKeys.push(key);
+            }
+        }
+
+        document.getElementById('spotifyClientId')['value'] = configValues.SPOTIFY_CLIENT_ID || '';
+        document.getElementById('spotifyClientSecret')['value'] = configValues.SPOTIFY_CLIENT_SECRET || '';
+        document.getElementById('wordpressEndpoint')['value'] = configValues.WORDPRESS_ENDPOINT || '';
+        document.getElementById('wordpressUsername')['value'] = configValues.WORDPRESS_USERNAME || '';
+        document.getElementById('wordpressPassword')['value'] = configValues.WORDPRESS_PASSWORD || '';
+        document.getElementById('openaiApiKey')['value'] = configValues.OPENAI_API_KEY || '';
+
+        if (missingKeys.length > 0 && source !== 'None (all sources failed)') {
+            console.log("Missing essential config keys based on current source:", missingKeys);
+            window.updateStatus(\`Missing configuration: \${missingKeys.join(', ')}. Please fill out the form.\`, true);
+            window.showConfigView();
+        } else if (source === 'None (all sources failed)') {
+            window.showConfigView();
+        } else {
+            console.log("Configuration seems OK based on current source.");
+            window.showMainAppView();
+            if (typeof window.refreshPostsUI === 'function') {
+                window.refreshPostsUI(); 
+            } else {
+                console.error('window.refreshPostsUI is NOT a function in checkInitialConfig');
+            }
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const mainBtn = document.getElementById('showMainAppBtn');
+        const configBtn = document.getElementById('showConfigBtn');
+
+        if(mainBtn) mainBtn.addEventListener('click', window.showMainAppView);
+        if(configBtn) configBtn.addEventListener('click', window.showConfigView);
+        
+        tryInitialLoad(); // Call initial load sequence after DOM is ready
+      });
 
     </script>
   </body>
@@ -291,14 +442,29 @@ async function publishStagedPostsAsDrafts(
   };
 }
 
-const webview = new Webview();
+function loadConfig() {
+  console.log("GUI: Loading configuration...");
+  const configValues = getConfig();
+  console.log("GUI: Configuration loaded:", configValues);
+  return configValues;
+}
 
-webview.bind("fetchAndStagePosts", fetchAndStagePosts);
-webview.bind("getStagedPosts", getStagedPosts);
-webview.bind("publishStagedPostsAsDrafts", publishStagedPostsAsDrafts);
+function runGui() {
+  const webview = new Webview(true);
 
-webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
-webview.title = "Khiphop Pipeline Manager";
-webview.run();
+  // Bind Deno functions to the webview
+  webview.bind("getAllConfigValues", loadConfig);
+  webview.bind("fetchAndStagePosts", fetchAndStagePosts);
+  webview.bind("getStagedPosts", getStagedPosts);
+  webview.bind("publishStagedPostsAsDrafts", publishStagedPostsAsDrafts);
+  webview.bind("saveConfig", saveConfig);
 
-console.log("GUI application started. Close window to exit.");
+  webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
+  webview.title = "Khiphop Pipeline Manager";
+  webview.run();
+
+  console.log("GUI application started. Close window to exit.");
+}
+
+// Start the GUI
+runGui();
