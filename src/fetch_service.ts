@@ -1,4 +1,3 @@
-// main.ts
 import { config } from "../src/config.ts";
 import {
   fetchRedditPosts,
@@ -59,7 +58,7 @@ export async function runPipeline() {
     console.log(`\nProcessing post ID: ${post.id} - Title: ${post.title}`);
 
     // 3. Enrich music releases or extract news text
-    if (["track", "album", "ep", "mv"].includes(post.featureType!)) {
+    if (post.featureType && ["track", "album", "ep", "mv"].includes(post.featureType)) {
       console.log("Enriching with music data...");
       post = await enrichWithMusicData(post);
     } else if (post.featureType === "news" || post.featureType === "rumor") {

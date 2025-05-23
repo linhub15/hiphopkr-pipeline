@@ -1,4 +1,3 @@
-// publish_staged.ts
 import { config } from "./config.ts";
 import { loadStagedPosts, savePostsToStage } from "../lib/data_store.ts";
 import { createWordPressPost } from "../lib/wordpress_client.ts";

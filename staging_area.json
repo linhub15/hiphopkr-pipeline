@@ -823,5 +823,45 @@
     "albumCoverUrl": "https://i.scdn.co/image/ab67616d0000b2731b3c313066aff3a30d704bf0",
     "spotifyLink": "https://open.spotify.com/track/27RGq3Oi81AqPBUwj73mfs",
     "producers": []
+  },
+  {
+    "id": "t3_1kt7mua",
+    "title": "Ak2daface - 4 me",
+    "flair": "Album",
+    "redditLink": "https://www.reddit.com/r/khiphop/comments/1kt7mua/ak2daface_4_me/",
+    "sourceUrl": "https://open.spotify.com/album/6XQNco8JnsWsR9nEC8HgDQ?si=9bBhNTHAQ0eRhsiFzFnphQ",
+    "thumbnailUrl": "https://b.thumbs.redditmedia.com/m8yHaD1r7G-LUAvHwyopso7frBIMRUES8KevJRLUT9E.jpg",
+    "domain": "open.spotify.com",
+    "featureType": "album",
+    "artist": "Ak2daface",
+    "trackOrAlbumTitle": "4 me",
+    "releaseDate": "2025-05-12",
+    "albumCoverUrl": "https://i.scdn.co/image/ab67616d0000b273b678a2ae067e48cc5a593e98",
+    "spotifyLink": "https://open.spotify.com/album/6XQNco8JnsWsR9nEC8HgDQ",
+    "producers": []
+  },
+  {
+    "id": "t3_1krlzsh",
+    "title": "New competition show \"House of Girls\" airing first episode 5/23 on ENA",
+    "flair": "News",
+    "redditLink": "https://www.reddit.com/r/khiphop/comments/1krlzsh/new_competition_show_house_of_girls_airing_first/",
+    "sourceUrl": "https://www.youtube.com/watch?v=-dbA5uCTiEA",
+    "thumbnailUrl": "https://b.thumbs.redditmedia.com/r0Z08wpgc-MeUiDHy5AcAixVEAxUIHw5EIanUePijTc.jpg",
+    "domain": "youtube.com",
+    "textContent": "Notable hiphop/r&amp;b contestants include Seori, Bamsem, Jiselle\n\nYDG is one of the judges",
+    "featureType": "news",
+    "description": "Notable hiphop/r&amp;b contestants include Seori, Bamsem, Jiselle\n\nYDG is one of the judges"
+  },
+  {
+    "id": "t3_1krd7wc",
+    "title": "Paloalto leaves Daytona following end of contract",
+    "flair": "News",
+    "redditLink": "https://www.reddit.com/r/khiphop/comments/1krd7wc/paloalto_leaves_daytona_following_end_of_contract/",
+    "sourceUrl": "https://www.instagram.com/p/DJ3qOT7y7z0/",
+    "thumbnailUrl": "https://b.thumbs.redditmedia.com/KhI9ic0TXGFxe3r3U73X0Ou9N87jFG2puUHv7gsY9mM.jpg",
+    "domain": "instagram.com",
+    "textContent": "\nhttps://www.instagram.com/p/DJ3qOT7y7z0/",
+    "featureType": "news",
+    "description": "\nhttps://www.instagram.com/p/DJ3qOT7y7z0/"
   }
 ]
