@@ -27,3 +27,29 @@ Album release
 - Post is formatted
 - NOT uploading to wordpress
 - NOT building the buttons and stuff
+
+
+## Title
+
+Videos/Music: {artist} Releases {type} '{name}'
+Album: {artist} Releases album [{name}]
+News: Pull title from reddit
+
+## Image is okay
+
+
+## Category
+music-release: single
+music-release: music video
+music-release: album
+music-release: news
+
+## Tags - out of scope
+
+## Exerpt
+
+Music releases, include it in the body of the message
+
+## Body information - search the web
+
+All done through Chat GPT

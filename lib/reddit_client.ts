@@ -1,11 +1,5 @@
-// reddit_client.ts
 import { config } from "../src/config.ts";
 import { ensureDir } from "@std/fs";
-// Ensure ProcessedRedditPost has a reliable `id` field.
-// The existing `id: data.permalink.split('/')[4] || Date.now().toString()` should work,
-// but using data.id (which is Reddit's internal base36 ID like `1abcde`) would be more standard if available directly,
-// or `data.name` (which is `t3_1abcde`). `data.permalink` is also good.
-// Let's refine the ID to be more robust if `data.name` is available.
 
 interface RedditPostData {
   kind: string;
