@@ -1,53 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { listRedditPostIds } from "@/lib/db";
 import { useRedditPosts } from "@/features/use_reddit_posts";
-
-interface ProcessedRedditPost {
-	id: string;
-	title: string;
-	featureType?: string;
-	artist?: string;
-}
-
-const posts = [
-	{
-		id: "1",
-		title: "Post 1",
-		featureType: "Feature Type 1",
-		artist: "Artist 1",
-	},
-	{
-		id: "2",
-		title: "Post 2",
-		featureType: "Feature Type 2",
-		artist: "Artist 2",
-	},
-];
+import { useFetchRedditPosts } from "@/features/use_fetch_reddit_posts";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/")({
 	component: Index,
 });
 
 function Index() {
-	const posts2 = useRedditPosts();
+	const posts = useRedditPosts();
+	const fetchRedditPosts = useFetchRedditPosts();
+
 	return (
 		<div>
 			<div className="flex justify-between">
 				<div className="flex items-center gap-4">
-					<Button variant="secondary" onClick={() => listRedditPostIds()}>
+					<Button
+						variant="secondary"
+						onClick={() => fetchRedditPosts.mutateAsync()}
+					>
 						Fetch Reddit Posts
-					</Button>{" "}
-					<span>fetching...</span>
+					</Button>
+					{fetchRedditPosts.isPending && (
+						<span className="text-sm text-neutral-400">Fetching...</span>
+					)}
 				</div>
 
 				<Button>Publish X drafts</Button>
 			</div>
-			{JSON.stringify(posts2.data)}
 
 			<div className="py-8 space-y-2">
-				{posts.map((post) => (
+				{posts.data?.map((post) => (
 					<label
 						key={post.id}
 						className="flex rounded-xl hover:bg-neutral-900 hover:cursor-pointer justify-between items-center p-4"
@@ -57,10 +42,13 @@ function Index() {
 							<Checkbox id={post.id} />
 							<div className="select-none">
 								<div className="text-lg font-semibold w-full">
-									{post.title}
-									<p className="text-sm text-neutral-400">
-										{post.featureType} by {post.artist}
-									</p>
+									<h3 className="inline-flex items-center gap-2">
+										<Badge>{post.flair}</Badge>
+										{post.title}
+									</h3>
+									<div className="flex gap-4 items-center py-1 text-sm text-neutral-400">
+										<span>Posted: {post.posted_at.toLocaleDateString()}</span>
+									</div>
 								</div>
 							</div>
 						</div>

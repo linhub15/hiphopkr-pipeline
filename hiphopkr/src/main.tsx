@@ -6,7 +6,9 @@ import "@fontsource-variable/inter/wght.css";
 
 import { routeTree } from "./routeTree.gen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { initDb } from "./lib/db";
 
+initDb();
 const queryClient = new QueryClient();
 
 const router = createRouter({

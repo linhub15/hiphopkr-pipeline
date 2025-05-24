@@ -164,6 +164,7 @@ export async function enrichWithMusicData(
 	post: ProcessedRedditPost,
 ): Promise<ProcessedRedditPost> {
 	const token = await getSpotifyToken();
+
 	if (!token) return post;
 
 	// Determine search query and type

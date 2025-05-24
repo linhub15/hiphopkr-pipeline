@@ -15,6 +15,7 @@ export async function fetchFromReddit() {
 
 	const postsToProcess = filterPostsToProcess(processedPostIds, posts);
 
+	console.info(`Processing ${postsToProcess.length} posts.`);
 	for (const post of postsToProcess) {
 		const enriched = await enrichPost(post);
 
@@ -23,9 +24,9 @@ export async function fetchFromReddit() {
 			title: enriched.title,
 			reddit_link: enriched.redditLink,
 			flair: enriched.flair || "",
-			posted_at: enriched.posted_utc,
-			created_at: Date.now(),
-			data: JSON.stringify(enriched),
+			posted_at: new Date(enriched.posted_utc * 1000), // multiply by milliseconds
+			created_at: new Date(),
+			data: enriched,
 		};
 
 		await saveRedditPost(redditPost);

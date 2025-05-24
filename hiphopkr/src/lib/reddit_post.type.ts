@@ -5,5 +5,6 @@ export interface RedditPost {
 	flair: string;
 	posted_at: Date;
 	created_at: Date;
-	data: JSON;
+	// biome-ignore lint/suspicious/noExplicitAny: JSON stringify can be anything
+	data: Record<string, any>;
 }

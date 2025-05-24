@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS ${reddit_posts} (
 	await db.execute(
 		`
 CREATE TABLE IF NOT EXISTS config (
+  id INTEGER PRIMARY KEY,
 	wordpress_username TEXT NOT NULL,
 	wordpress_password TEXT NOT NULL,
 	wordpress_endpoint TEXT NOT NULL,
@@ -45,7 +46,7 @@ export async function getConfig() {
 			spotify_client_secret: string;
 		}[]
 	>(
-		"SELECT wordpress_username, wordpress_password, wordpress_endpoint, spotify_client_id, spotify_client_secret FROM config WHERE id = 1",
+		"SELECT wordpress_username, wordpress_password, wordpress_endpoint, spotify_client_id, spotify_client_secret FROM config",
 	);
 	await db.close();
 
@@ -60,10 +61,24 @@ export async function setConfig(config: Config) {
 	const db = await Database.load(DB_PATH);
 	await db.execute(
 		`
-		INSERT OR REPLACE INTO config (wordpress_username, wordpress_password, wordpress_endpoint, spotify_client_id, spotify_client_secret)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO config (
+			id,
+			wordpress_username,
+			wordpress_password,
+			wordpress_endpoint,
+			spotify_client_id,
+			spotify_client_secret
+		) VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+		  id = 1,
+			wordpress_username = excluded.wordpress_username,
+			wordpress_password = excluded.wordpress_password,
+			wordpress_endpoint = excluded.wordpress_endpoint,
+			spotify_client_id = excluded.spotify_client_id,
+			spotify_client_secret = excluded.spotify_client_secret
 		`,
 		[
+			1,
 			config.wordpress_username,
 			config.wordpress_password,
 			config.wordpress_endpoint,
@@ -110,14 +125,26 @@ export async function listRedditPostIds(): Promise<Set<string>> {
 	await db.close();
 
 	const ids = new Set(result.map((row) => row.id));
+	console.info(`selected ${ids.size} ids from db.`);
 	return ids;
 }
 
 export async function saveRedditPost(post: RedditPost) {
+	console.info("listRedditPosts", { post });
+
 	const db = await Database.load(DB_PATH);
 	await db.execute(
 		`
-		INSERT INTO ${reddit_posts} (id, title, reddit_link, flair, posted_at, created_at, data)
+		INSERT INTO ${reddit_posts}
+		(
+			id,
+			title,
+			reddit_link,
+			flair,
+			posted_at,
+			created_at,
+			data
+		)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		`,
 		[
@@ -125,9 +152,9 @@ export async function saveRedditPost(post: RedditPost) {
 			post.title,
 			post.reddit_link,
 			post.flair,
-			post.posted_at.getTime(),
-			post.created_at.getTime(),
-			JSON.stringify(post.data),
+			post.posted_at.valueOf(),
+			post.created_at.valueOf(),
+			post.data ? JSON.stringify(post.data) : {},
 		],
 	);
 	await db.close();

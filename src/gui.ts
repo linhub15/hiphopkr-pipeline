@@ -1,7 +1,7 @@
 import { Webview } from "jsr:@webview/webview";
 import { config, getConfig, saveConfig } from "./config.ts";
 import { loadStagedPosts, savePostsToStage } from "../lib/data_store.ts";
-import { createWordPressPost } from "../lib/wordpress_client.ts";
+import { createWordPressPost } from "../hiphopkr/src/lib/wordpress_client.ts";
 import type { ProcessedRedditPost } from "../lib/reddit_client.ts";
 import { runPipeline as runFetchAndStageProcess } from "./fetch_service.ts"; // Import the pipeline function
 
@@ -343,127 +343,126 @@ const html = `
 `;
 
 async function fetchAndStagePosts(): Promise<string> {
-  try {
-    console.log("GUI: Triggering fetch and stage process (main pipeline)...");
-    await runFetchAndStageProcess(); // This is the imported main pipeline function
-    console.log("GUI: Fetch and stage process completed successfully.");
-    return "Fetch and stage process completed successfully.";
-  } catch (e: unknown) {
-    const error = e as Error;
-    console.error("GUI: Error during fetch and stage process:", error);
-    return `Error in fetch and stage: ${error.message}`;
-  }
+	try {
+		console.log("GUI: Triggering fetch and stage process (main pipeline)...");
+		await runFetchAndStageProcess(); // This is the imported main pipeline function
+		console.log("GUI: Fetch and stage process completed successfully.");
+		return "Fetch and stage process completed successfully.";
+	} catch (e: unknown) {
+		const error = e as Error;
+		console.error("GUI: Error during fetch and stage process:", error);
+		return `Error in fetch and stage: ${error.message}`;
+	}
 }
 
 function getStagedPosts(): ProcessedRedditPost[] {
-  try {
-    console.log("GUI: Loading staged posts...");
-    const posts = loadStagedPosts();
-    console.log(`GUI: Loaded ${posts.length} staged posts.`);
-    return posts;
-  } catch (e: unknown) {
-    const error = e as Error;
-    console.error("GUI: Error loading staged posts:", error);
-    return [];
-  }
+	try {
+		console.log("GUI: Loading staged posts...");
+		const posts = loadStagedPosts();
+		console.log(`GUI: Loaded ${posts.length} staged posts.`);
+		return posts;
+	} catch (e: unknown) {
+		const error = e as Error;
+		console.error("GUI: Error loading staged posts:", error);
+		return [];
+	}
 }
 
 async function publishStagedPostsAsDrafts(
-  postIds: string[],
+	postIds: string[],
 ): Promise<{ message: string }> {
-  if (!postIds || postIds.length === 0) {
-    return { message: "No post IDs provided for publishing." };
-  }
-  console.log(
-    `GUI: Received request to publish posts as drafts: ${postIds.join(", ")}`,
-  );
+	if (!postIds || postIds.length === 0) {
+		return { message: "No post IDs provided for publishing." };
+	}
+	console.log(
+		`GUI: Received request to publish posts as drafts: ${postIds.join(", ")}`,
+	);
 
-  const stagedPosts = loadStagedPosts(); // Assumes CWD is project root
-  const postsToPublish: ProcessedRedditPost[] = [];
-  const remainingStagedPostsAfterSelection = [...stagedPosts];
+	const stagedPosts = loadStagedPosts(); // Assumes CWD is project root
+	const postsToPublish: ProcessedRedditPost[] = [];
+	const remainingStagedPostsAfterSelection = [...stagedPosts];
 
-  for (const id of postIds) {
-    const postIndex = remainingStagedPostsAfterSelection.findIndex((p) =>
-      p.id === id
-    );
-    if (postIndex > -1) {
-      postsToPublish.push(
-        remainingStagedPostsAfterSelection.splice(postIndex, 1)[0],
-      );
-    }
-  }
+	for (const id of postIds) {
+		const postIndex = remainingStagedPostsAfterSelection.findIndex(
+			(p) => p.id === id,
+		);
+		if (postIndex > -1) {
+			postsToPublish.push(
+				remainingStagedPostsAfterSelection.splice(postIndex, 1)[0],
+			);
+		}
+	}
 
-  if (postsToPublish.length === 0) {
-    return { message: "Selected posts not found or already processed." };
-  }
+	if (postsToPublish.length === 0) {
+		return { message: "Selected posts not found or already processed." };
+	}
 
-  const authTokenBase64 = btoa(
-    `${config.wordpress.username}:${config.wordpress.password}`,
-  );
+	const authTokenBase64 = btoa(
+		`${config.wordpress.username}:${config.wordpress.password}`,
+	);
 
-  let successCount = 0;
-  let failureCount = 0;
-  const successfullyPublishedIds: string[] = [];
+	let successCount = 0;
+	let failureCount = 0;
+	const successfullyPublishedIds: string[] = [];
 
-  for (const post of postsToPublish) {
-    console.log(`GUI: Publishing "\${post.title}" as draft...`);
-    try {
-      const success = await createWordPressPost(post, authTokenBase64); // Assumes CWD is project root for any path resolutions within
-      if (success) {
-        console.log(`GUI: Successfully published "${post.title}" as draft.`);
-        successfullyPublishedIds.push(post.id);
-        successCount++;
-      } else {
-        console.error(
-          `GUI: Failed to publish "${post.title}" as draft. It will remain staged.`,
-        );
-        failureCount++;
-      }
-    } catch (e: unknown) {
-      const error = e as Error;
-      console.error(
-        `GUI: Error during publishing of "${post.title}" as draft:`,
-        error,
-      );
-      failureCount++;
-    }
-  }
+	for (const post of postsToPublish) {
+		console.log(`GUI: Publishing "\${post.title}" as draft...`);
+		try {
+			const success = await createWordPressPost(post, authTokenBase64); // Assumes CWD is project root for any path resolutions within
+			if (success) {
+				console.log(`GUI: Successfully published "${post.title}" as draft.`);
+				successfullyPublishedIds.push(post.id);
+				successCount++;
+			} else {
+				console.error(
+					`GUI: Failed to publish "${post.title}" as draft. It will remain staged.`,
+				);
+				failureCount++;
+			}
+		} catch (e: unknown) {
+			const error = e as Error;
+			console.error(
+				`GUI: Error during publishing of "${post.title}" as draft:`,
+				error,
+			);
+			failureCount++;
+		}
+	}
 
-  // Filter out successfully published posts from the original full list
-  const finalStagedPosts = stagedPosts.filter((p) =>
-    !successfullyPublishedIds.includes(p.id)
-  );
-  await savePostsToStage(finalStagedPosts); // Assumes CWD is project root
-  console.log("GUI: Staging area updated after publishing attempt.");
+	// Filter out successfully published posts from the original full list
+	const finalStagedPosts = stagedPosts.filter(
+		(p) => !successfullyPublishedIds.includes(p.id),
+	);
+	await savePostsToStage(finalStagedPosts); // Assumes CWD is project root
+	console.log("GUI: Staging area updated after publishing attempt.");
 
-  return {
-    message:
-      `Publishing drafts complete. ${successCount} succeeded, ${failureCount} failed.`,
-  };
+	return {
+		message: `Publishing drafts complete. ${successCount} succeeded, ${failureCount} failed.`,
+	};
 }
 
 function loadConfig() {
-  console.log("GUI: Loading configuration...");
-  const configValues = getConfig();
-  console.log("GUI: Configuration loaded:", configValues);
-  return configValues;
+	console.log("GUI: Loading configuration...");
+	const configValues = getConfig();
+	console.log("GUI: Configuration loaded:", configValues);
+	return configValues;
 }
 
 function runGui() {
-  const webview = new Webview(true);
+	const webview = new Webview(true);
 
-  // Bind Deno functions to the webview
-  webview.bind("getAllConfigValues", loadConfig);
-  webview.bind("fetchAndStagePosts", fetchAndStagePosts);
-  webview.bind("getStagedPosts", getStagedPosts);
-  webview.bind("publishStagedPostsAsDrafts", publishStagedPostsAsDrafts);
-  webview.bind("saveConfig", saveConfig);
+	// Bind Deno functions to the webview
+	webview.bind("getAllConfigValues", loadConfig);
+	webview.bind("fetchAndStagePosts", fetchAndStagePosts);
+	webview.bind("getStagedPosts", getStagedPosts);
+	webview.bind("publishStagedPostsAsDrafts", publishStagedPostsAsDrafts);
+	webview.bind("saveConfig", saveConfig);
 
-  webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
-  webview.title = "Khiphop Pipeline Manager";
-  webview.run();
+	webview.navigate(`data:text/html,${encodeURIComponent(html)}`);
+	webview.title = "Khiphop Pipeline Manager";
+	webview.run();
 
-  console.log("GUI application started. Close window to exit.");
+	console.log("GUI application started. Close window to exit.");
 }
 
 // Start the GUI
