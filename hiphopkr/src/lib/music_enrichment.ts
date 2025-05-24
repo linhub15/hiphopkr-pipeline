@@ -25,8 +25,6 @@ interface SpotifyAlbum {
 	external_urls: { spotify: string };
 	label?: string; // Often contains producer info or label
 	copyrights?: { text: string; type: string }[]; // Can contain producer info
-	// Spotify API doesn't have a direct "producers" field.
-	// It's often in copyrights, description, or requires searching credits if available.
 }
 
 let spotifyAccessToken: string | null = null;

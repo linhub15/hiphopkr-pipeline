@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { initDb, listRedditPostIds } from "@/lib/db";
+import { listRedditPostIds } from "@/lib/db";
+import { useRedditPosts } from "@/features/use_reddit_posts";
 
 interface ProcessedRedditPost {
 	id: string;
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+	const posts2 = useRedditPosts();
 	return (
 		<div>
 			<div className="flex justify-between">
@@ -42,6 +44,7 @@ function Index() {
 
 				<Button>Publish X drafts</Button>
 			</div>
+			{JSON.stringify(posts2.data)}
 
 			<div className="py-8 space-y-2">
 				{posts.map((post) => (

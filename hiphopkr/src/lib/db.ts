@@ -3,13 +3,14 @@ import type { RedditPost } from "./reddit_post.type";
 import type { Config } from "./config.type";
 
 const DB_PATH = "sqlite:test.db";
+const reddit_posts = "reddit_posts";
 
 export async function initDb() {
 	const db = await Database.load(DB_PATH);
 
 	await db.execute(
 		`
-CREATE TABLE IF NOT EXISTS reddit_posts (
+CREATE TABLE IF NOT EXISTS ${reddit_posts} (
 	id TEXT PRIMARY KEY,
 	title TEXT NOT NULL,
 	reddit_link TEXT NOT NULL,
@@ -73,10 +74,38 @@ export async function setConfig(config: Config) {
 	await db.close();
 }
 
+export async function listRedditPosts(): Promise<RedditPost[]> {
+	const db = await Database.load(DB_PATH);
+	const result = await db.select<
+		{
+			id: string;
+			title: string;
+			reddit_link: string;
+			flair: string;
+			posted_at: number;
+			created_at: number;
+			data: string;
+		}[]
+	>(`SELECT * FROM ${reddit_posts}`);
+	await db.close();
+
+	const posts: RedditPost[] = result.map((row) => ({
+		id: row.id,
+		title: row.title,
+		reddit_link: row.reddit_link,
+		flair: row.flair,
+		posted_at: new Date(row.posted_at),
+		created_at: new Date(row.created_at),
+		data: JSON.parse(row.data),
+	}));
+
+	return posts;
+}
+
 export async function listRedditPostIds(): Promise<Set<string>> {
 	const db = await Database.load(DB_PATH);
 	const result = await db.select<{ id: string }[]>(
-		"SELECT id FROM reddit_posts",
+		`SELECT id FROM ${reddit_posts}`,
 	);
 	await db.close();
 
@@ -88,7 +117,7 @@ export async function saveRedditPost(post: RedditPost) {
 	const db = await Database.load(DB_PATH);
 	await db.execute(
 		`
-		INSERT INTO reddit_posts (id, title, reddit_link, flair, posted_at, created_at, data)
+		INSERT INTO ${reddit_posts} (id, title, reddit_link, flair, posted_at, created_at, data)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		`,
 		[
@@ -96,9 +125,9 @@ export async function saveRedditPost(post: RedditPost) {
 			post.title,
 			post.reddit_link,
 			post.flair,
-			post.posted_at,
-			post.created_at,
-			post.data,
+			post.posted_at.getTime(),
+			post.created_at.getTime(),
+			JSON.stringify(post.data),
 		],
 	);
 	await db.close();

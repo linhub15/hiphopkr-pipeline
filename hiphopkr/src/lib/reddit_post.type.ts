@@ -3,7 +3,7 @@ export interface RedditPost {
 	title: string;
 	reddit_link: string;
 	flair: string;
-	posted_at: number;
-	created_at: number;
-	data: string;
+	posted_at: Date;
+	created_at: Date;
+	data: JSON;
 }
