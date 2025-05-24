@@ -5,6 +5,11 @@ This was generated with Gemina 2.5 Pro prompted by Hubert Lin
 This data pipeline handles creation of posts by taking data from /r/khiphop and
 spotify.
 
+
+# DB location
+linux: `/.config/{identifier}`
+windows: ``
+
 Album release
 
 - photo featured image
