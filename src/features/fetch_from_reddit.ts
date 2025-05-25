@@ -46,7 +46,6 @@ function filterPostsToProcess(
 		if (processedPostIds.has(post.id)) {
 			continue;
 		}
-		console.log(post.id);
 		postsToProcess.push(post);
 	}
 

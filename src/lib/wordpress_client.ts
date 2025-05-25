@@ -1,3 +1,4 @@
+import { fetch } from "@tauri-apps/plugin-http";
 import type { ProcessedRedditPost } from "./reddit_client";
 
 async function uploadMediaToWordPress(
@@ -72,13 +73,13 @@ export async function createWordPressPost(
 	let featuredMediaId: number | null = null;
 	if (post.albumCoverUrl) {
 		console.info("uploading album cover");
-		// featuredMediaId = await uploadMediaToWordPress(
-		// 	post.albumCoverUrl,
-		// 	post.trackOrAlbumTitle || post.title,
-		// 	post.trackOrAlbumTitle || post.title,
-		// 	authTokenBase64,
-		// 	wordpressEndpoint,
-		// );
+		featuredMediaId = await uploadMediaToWordPress(
+			post.albumCoverUrl,
+			post.trackOrAlbumTitle || post.title,
+			post.trackOrAlbumTitle || post.title,
+			authTokenBase64,
+			wordpressEndpoint,
+		);
 	}
 
 	let title = "";
@@ -99,34 +100,31 @@ export async function createWordPressPost(
 		featured_media: featuredMediaId ?? undefined,
 	};
 
-	console.log({ wpPost });
+	try {
+		const response = await fetch(`${wordpressEndpoint}/wp/v2/posts`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Basic ${authTokenBase64}`,
+			},
+			body: JSON.stringify(wpPost),
+		});
 
-	return true;
-	// try {
-	// 	const response = await fetch(`${wordpressEndpoint}/wp/v2/posts`, {
-	// 		method: "POST",
-	// 		headers: {
-	// 			"Content-Type": "application/json",
-	// 			Authorization: `Basic ${authTokenBase64}`,
-	// 		},
-	// 		body: JSON.stringify(wpPost),
-	// 	});
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error(
+				`Wordpress: failed to create post: ${response.status} - ${errorText}`,
+			);
+			return false;
+		}
 
-	// 	if (!response.ok) {
-	// 		const errorText = await response.text();
-	// 		console.error(
-	// 			`Wordpress: failed to create post: ${response.status} - ${errorText}`,
-	// 		);
-	// 		return false;
-	// 	}
-
-	// 	const responseData = await response.json();
-	// 	console.info(
-	// 		`WordPress: post created successfully (ID: ${responseData.id}, Status: ${responseData.status}): ${responseData.link}`,
-	// 	);
-	// 	return true;
-	// } catch (error) {
-	// 	console.error("Error creating WordPress post:", error);
-	// 	return false;
-	// }
+		const responseData = await response.json();
+		console.info(
+			`WordPress: post created successfully (ID: ${responseData.id}, Status: ${responseData.status}): ${responseData.link}`,
+		);
+		return true;
+	} catch (error) {
+		console.error("Error creating WordPress post:", error);
+		return false;
+	}
 }

@@ -17,6 +17,11 @@ export function usePublishDrafts() {
 				`${args.wordpressUsername}:${args.wordpressPassword}`,
 			);
 
+			if (args.postIds.length === 0) {
+				alert("Please select at least one post to publish.");
+				return;
+			}
+
 			const posts = await listRedditPostsById(args.postIds);
 
 			for (const post of posts) {

@@ -1,3 +1,4 @@
+import { fetch } from "@tauri-apps/plugin-http";
 import { APP_CONSTANTS } from "./constants.ts";
 import { decode } from "he";
 

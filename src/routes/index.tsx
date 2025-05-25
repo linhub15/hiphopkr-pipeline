@@ -6,6 +6,8 @@ import { useFetchRedditPosts } from "@/features/use_fetch_reddit_posts";
 import { Badge } from "@/components/ui/badge";
 import { usePublishDrafts } from "@/features/use_publish_drafts";
 import { useConfig } from "@/features/use_config";
+import { useState } from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 
 export const Route = createFileRoute("/")({
 	component: Index,
@@ -16,6 +18,7 @@ function Index() {
 	const config = useConfig();
 	const fetchRedditPosts = useFetchRedditPosts();
 	const publishDrafts = usePublishDrafts();
+	const [selected, setSelected] = useState<string[]>([]);
 
 	const publish = async () => {
 		if (!config.data) {
@@ -24,11 +27,19 @@ function Index() {
 		}
 
 		await publishDrafts.mutateAsync({
-			postIds: ["t3_1kgbhrn", "t3_1kgm6wp"],
+			postIds: selected,
 			wordpressEndpoint: config.data?.wordpress_endpoint,
 			wordpressUsername: config.data?.wordpress_username,
 			wordpressPassword: config.data?.wordpress_password,
 		});
+	};
+
+	const toggle = (postId: string, checked: CheckedState) => {
+		if (checked) {
+			setSelected((prev) => [...prev, postId]);
+		} else {
+			setSelected((prev) => prev.filter((id) => id !== postId));
+		}
 	};
 
 	return (
@@ -56,7 +67,10 @@ function Index() {
 						htmlFor={post.id}
 					>
 						<div className="flex items-center gap-6">
-							<Checkbox id={post.id} />
+							<Checkbox
+								id={post.id}
+								onCheckedChange={(checked) => toggle(post.id, checked)}
+							/>
 							<div className="select-none">
 								<div className="text-lg font-semibold w-full">
 									<h3 className="inline-flex items-center gap-2">

@@ -9,14 +9,9 @@ Tauri App using React, Shadcn, TailwindCSS.
 linux: `/.config/{identifier}`
 mac: ``
 
-## Category
+## TODO - Category
 music-release: single
 music-release: music video
 music-release: album
 music-release: news
 
-## Exerpt
-
-Music releases, include it in the body of the message
-
-## Body information just JSON

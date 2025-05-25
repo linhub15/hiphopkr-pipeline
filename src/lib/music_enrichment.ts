@@ -1,3 +1,4 @@
+import { fetch } from "@tauri-apps/plugin-http";
 import { APP_CONSTANTS } from "./constants.ts";
 import { getConfig } from "./db.ts";
 import type { ProcessedRedditPost } from "./reddit_client.ts";

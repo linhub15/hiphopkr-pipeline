@@ -17,7 +17,8 @@ function Configuration() {
 
 	const form = useForm({
 		defaultValues: {
-			wordpress_endpoint: config.data?.wordpress_endpoint || "",
+			wordpress_endpoint:
+				config.data?.wordpress_endpoint || "https://hiphopkr.com/wp-json",
 			wordpress_username: config.data?.wordpress_username || "",
 			wordpress_password: config.data?.wordpress_password || "",
 			spotify_client_id: config.data?.spotify_client_id || "",

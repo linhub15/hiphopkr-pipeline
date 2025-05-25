@@ -1,3 +1,4 @@
+import { fetch } from "@tauri-apps/plugin-http";
 import type { ProcessedRedditPost } from "./reddit_client.ts";
 
 export async function extractNewsContent(
@@ -22,7 +23,7 @@ export async function extractNewsContent(
 		!post.domain.includes("redd.it")
 	) {
 		try {
-			console.log(`Workspaceing external content for news: ${post.sourceUrl}`);
+			console.info(`Workspaceing external content for news: ${post.sourceUrl}`);
 			const response = await fetch(post.sourceUrl, {
 				headers: {
 					"User-Agent": "KhiphopPipelineBot/1.0 (+https://hiphopkr.com)",
