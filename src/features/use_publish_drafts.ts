@@ -23,14 +23,22 @@ export function usePublishDrafts() {
 			}
 
 			const posts = await listRedditPostsById(args.postIds);
+			let successCount = 0;
 
 			for (const post of posts) {
-				await createWordPressPost(
-					post.data as ProcessedRedditPost,
-					authTokenBase64,
-					args.wordpressEndpoint,
-				);
+				try {
+					await createWordPressPost(
+						post.data as ProcessedRedditPost,
+						authTokenBase64,
+						args.wordpressEndpoint,
+					);
+					successCount++;
+				} catch (error) {
+					console.error("Error publishing post:", error);
+				}
 			}
+
+			alert(`Successfully published ${successCount} posts`);
 		},
 	});
 }

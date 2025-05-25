@@ -32,6 +32,8 @@ function Index() {
 			wordpressUsername: config.data?.wordpress_username,
 			wordpressPassword: config.data?.wordpress_password,
 		});
+
+		setSelected([]);
 	};
 
 	const toggle = (postId: string, checked: CheckedState) => {

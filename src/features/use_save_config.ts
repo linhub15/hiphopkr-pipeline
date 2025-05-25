@@ -5,7 +5,9 @@ import { useMutation } from "@tanstack/react-query";
 export function useSaveConfig() {
 	return useMutation({
 		mutationFn: async (request: Config) => {
-			return await setConfig(request);
+			await setConfig(request);
+			alert("Config saved successfully");
+			return;
 		},
 	});
 }

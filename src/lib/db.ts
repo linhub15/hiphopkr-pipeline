@@ -89,6 +89,12 @@ export async function setConfig(config: Config) {
 	await db.close();
 }
 
+export async function clearRedditPosts() {
+	const db = await Database.load(DB_PATH);
+	await db.execute(`DELETE FROM ${reddit_posts}`);
+	await db.close();
+}
+
 export async function listRedditPosts(): Promise<RedditPost[]> {
 	const db = await Database.load(DB_PATH);
 	const result = await db.select<

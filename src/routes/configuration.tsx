@@ -25,6 +25,7 @@ function Configuration() {
 			spotify_client_secret: config.data?.spotify_client_secret || "",
 		} satisfies Config,
 		onSubmit: async ({ value }) => {
+			value.wordpress_password = value.wordpress_password.replace(/\s+/g, "");
 			await saveConfig.mutateAsync(value);
 		},
 	});
