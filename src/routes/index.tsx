@@ -1,13 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Spinner } from "@/components/spinner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useRedditPosts } from "@/features/use_reddit_posts";
-import { useFetchRedditPosts } from "@/features/use_fetch_reddit_posts";
-import { Badge } from "@/components/ui/badge";
-import { usePublishDrafts } from "@/features/use_publish_drafts";
 import { useConfig } from "@/features/use_config";
-import { useState } from "react";
+import { useFetchRedditPosts } from "@/features/use_fetch_reddit_posts";
+import { usePublishDrafts } from "@/features/use_publish_drafts";
+import { useRedditPosts } from "@/features/use_reddit_posts";
 import type { CheckedState } from "@radix-ui/react-checkbox";
+import { createFileRoute } from "@tanstack/react-router";
+import { message } from "@tauri-apps/plugin-dialog";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
 	component: Index,
@@ -22,7 +24,10 @@ function Index() {
 
 	const publish = async () => {
 		if (!config.data) {
-			alert("Please configure your WordPress settings first.");
+			await message("Please configure your WordPress settings first.", {
+				title: "Missing config",
+				kind: "warning",
+			});
 			return;
 		}
 
@@ -55,7 +60,10 @@ function Index() {
 						Fetch Reddit Posts
 					</Button>
 					{fetchRedditPosts.isPending && (
-						<span className="text-sm text-neutral-400">Fetching...</span>
+						<span className="inline-flex items-center text-sm text-neutral-400">
+							Fetching...
+							<Spinner className="animate-spin fill-white" />{" "}
+						</span>
 					)}
 				</div>
 				<Button onClick={publish}>Publish X drafts</Button>

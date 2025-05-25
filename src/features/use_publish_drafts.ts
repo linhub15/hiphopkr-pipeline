@@ -1,3 +1,4 @@
+import { message } from "@tauri-apps/plugin-dialog";
 import { listRedditPostsById } from "@/lib/db";
 import type { ProcessedRedditPost } from "@/lib/reddit_client";
 import { createWordPressPost } from "@/lib/wordpress_client";
@@ -18,7 +19,10 @@ export function usePublishDrafts() {
 			);
 
 			if (args.postIds.length === 0) {
-				alert("Please select at least one post to publish.");
+				await message("Please select at least one post to publish.", {
+					title: "Missing selection",
+					kind: "warning",
+				});
 				return;
 			}
 
@@ -38,7 +42,7 @@ export function usePublishDrafts() {
 				}
 			}
 
-			alert(`Successfully published ${successCount} posts`);
+			await message(`Successfully published ${successCount} posts`);
 		},
 	});
 }
