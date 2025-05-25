@@ -11,7 +11,11 @@ import type { RedditPost } from "@/lib/reddit_post.type";
 export async function fetchFromReddit() {
 	const processedPostIds = await listRedditPostIds();
 
-	const posts = await pullFromReddit();
+	const posts = await fetchRedditPosts(
+		APP_CONSTANTS.reddit.subreddit_url,
+		APP_CONSTANTS.reddit.fetch_limit,
+	);
+	console.info(`Fetched ${posts.length} posts from Reddit.`);
 
 	const postsToProcess = filterPostsToProcess(processedPostIds, posts);
 
@@ -33,17 +37,6 @@ export async function fetchFromReddit() {
 	}
 }
 
-async function pullFromReddit() {
-	const redditPosts = await fetchRedditPosts(
-		APP_CONSTANTS.reddit.subreddit_url,
-		APP_CONSTANTS.reddit.fetch_limit,
-	);
-
-	console.info(`Fetched ${redditPosts.length} posts from Reddit.`);
-
-	return redditPosts;
-}
-
 function filterPostsToProcess(
 	processedPostIds: Set<string>,
 	redditPosts: ProcessedRedditPost[],
@@ -53,6 +46,7 @@ function filterPostsToProcess(
 		if (processedPostIds.has(post.id)) {
 			continue;
 		}
+		console.log(post.id);
 		postsToProcess.push(post);
 	}
 

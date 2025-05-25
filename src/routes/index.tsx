@@ -4,6 +4,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useRedditPosts } from "@/features/use_reddit_posts";
 import { useFetchRedditPosts } from "@/features/use_fetch_reddit_posts";
 import { Badge } from "@/components/ui/badge";
+import { usePublishDrafts } from "@/features/use_publish_drafts";
+import { useConfig } from "@/features/use_config";
 
 export const Route = createFileRoute("/")({
 	component: Index,
@@ -11,7 +13,23 @@ export const Route = createFileRoute("/")({
 
 function Index() {
 	const posts = useRedditPosts();
+	const config = useConfig();
 	const fetchRedditPosts = useFetchRedditPosts();
+	const publishDrafts = usePublishDrafts();
+
+	const publish = async () => {
+		if (!config.data) {
+			alert("Please configure your WordPress settings first.");
+			return;
+		}
+
+		await publishDrafts.mutateAsync({
+			postIds: ["t3_1kgbhrn", "t3_1kgm6wp"],
+			wordpressEndpoint: config.data?.wordpress_endpoint,
+			wordpressUsername: config.data?.wordpress_username,
+			wordpressPassword: config.data?.wordpress_password,
+		});
+	};
 
 	return (
 		<div>
@@ -27,8 +45,7 @@ function Index() {
 						<span className="text-sm text-neutral-400">Fetching...</span>
 					)}
 				</div>
-
-				<Button>Publish X drafts</Button>
+				<Button onClick={publish}>Publish X drafts</Button>
 			</div>
 
 			<div className="py-8 space-y-2">

@@ -1,4 +1,5 @@
 import { APP_CONSTANTS } from "./constants.ts";
+import { decode } from "he";
 
 interface RedditPostData {
 	kind: string;
@@ -52,6 +53,8 @@ async function fetchRedditData(subredditUrl: URL, limit: number) {
 	fetchUrl.searchParams.append("limit", limit.toString());
 	fetchUrl.searchParams.append("t", "day");
 
+	console.info(`Fetching from URL: ${fetchUrl.href}`);
+
 	const response = await fetch(fetchUrl);
 
 	if (!response.ok) {
@@ -89,7 +92,7 @@ export async function fetchRedditPosts(
 							)
 					: true;
 			})
-			.map((post) => processRedditPost(post.data))
+			.map((post) => mapPost(post.data))
 			.filter((p) => p !== null) as ProcessedRedditPost[];
 	} catch (error) {
 		console.error("Error fetching or processing Reddit posts:", error);
@@ -97,9 +100,7 @@ export async function fetchRedditPosts(
 	}
 }
 
-function processRedditPost(
-	data: RedditPostData["data"],
-): ProcessedRedditPost | null {
+function mapPost(data: RedditPostData["data"]): ProcessedRedditPost | null {
 	let thumbnailUrl = data.thumbnail;
 	if (!thumbnailUrl || ["self", "default", "nsfw", ""].includes(thumbnailUrl)) {
 		thumbnailUrl = undefined;
@@ -107,7 +108,7 @@ function processRedditPost(
 
 	const processed: ProcessedRedditPost = {
 		id: data.name, // Using Reddit's full t3_xxxxx ID for uniqueness
-		title: data.title,
+		title: decode(data.title),
 		flair: data.link_flair_text || null,
 		redditLink: `https://www.reddit.com${data.permalink}`,
 		posted_utc: data.created_utc,

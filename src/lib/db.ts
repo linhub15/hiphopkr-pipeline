@@ -101,7 +101,40 @@ export async function listRedditPosts(): Promise<RedditPost[]> {
 			created_at: number;
 			data: string;
 		}[]
-	>(`SELECT * FROM ${reddit_posts}`);
+	>(`SELECT * FROM ${reddit_posts} order by posted_at desc`);
+	await db.close();
+
+	const posts: RedditPost[] = result.map((row) => ({
+		id: row.id,
+		title: row.title,
+		reddit_link: row.reddit_link,
+		flair: row.flair,
+		posted_at: new Date(row.posted_at),
+		created_at: new Date(row.created_at),
+		data: JSON.parse(row.data),
+	}));
+
+	return posts;
+}
+
+export async function listRedditPostsById(
+	ids: string[],
+): Promise<RedditPost[]> {
+	const db = await Database.load(DB_PATH);
+	const result = await db.select<
+		{
+			id: string;
+			title: string;
+			reddit_link: string;
+			flair: string;
+			posted_at: number;
+			created_at: number;
+			data: string;
+		}[]
+	>(
+		`SELECT * FROM ${reddit_posts} WHERE id IN (${ids.map(() => "?").join(",")})`,
+		ids,
+	);
 	await db.close();
 
 	const posts: RedditPost[] = result.map((row) => ({

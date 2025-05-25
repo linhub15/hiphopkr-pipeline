@@ -1,3 +1,5 @@
+import { listRedditPostsById } from "@/lib/db";
+import type { ProcessedRedditPost } from "@/lib/reddit_client";
 import { createWordPressPost } from "@/lib/wordpress_client";
 import { useMutation } from "@tanstack/react-query";
 
@@ -15,11 +17,11 @@ export function usePublishDrafts() {
 				`${args.wordpressUsername}:${args.wordpressPassword}`,
 			);
 
-			const posts = [];
+			const posts = await listRedditPostsById(args.postIds);
 
 			for (const post of posts) {
 				await createWordPressPost(
-					post,
+					post.data as ProcessedRedditPost,
 					authTokenBase64,
 					args.wordpressEndpoint,
 				);

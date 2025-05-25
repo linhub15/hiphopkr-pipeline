@@ -3,6 +3,7 @@ import type { ProcessedRedditPost } from "./reddit_client";
 async function uploadMediaToWordPress(
 	imageUrl: string,
 	title: string,
+	altText: string,
 	authToken: string,
 	wordpressEndpoint: string,
 ): Promise<number | null> {
@@ -27,8 +28,8 @@ async function uploadMediaToWordPress(
 
 		const formData = new FormData();
 		formData.append("file", imageBlob, fileName);
-		formData.append("title", `${title} Album Cover`);
-		formData.append("alt_text", `${title} - Cover Art`);
+		formData.append("title", title);
+		formData.append("alt_text", altText);
 
 		const mediaResponse = await fetch(`${wordpressEndpoint}/wp/v2/media`, {
 			method: "POST",
@@ -59,8 +60,8 @@ interface WordPressPostPayload {
 	content: string;
 	status: "publish" | "draft";
 	featured_media?: number;
+	featuredImage?: { url: string; title: string; altText: string };
 	categories?: number[];
-	tags?: number[];
 }
 
 export async function createWordPressPost(
@@ -70,49 +71,62 @@ export async function createWordPressPost(
 ): Promise<boolean> {
 	let featuredMediaId: number | null = null;
 	if (post.albumCoverUrl) {
-		featuredMediaId = await uploadMediaToWordPress(
-			post.albumCoverUrl,
-			post.trackOrAlbumTitle || post.title,
-			authTokenBase64,
-			wordpressEndpoint,
-		);
+		console.info("uploading album cover");
+		// featuredMediaId = await uploadMediaToWordPress(
+		// 	post.albumCoverUrl,
+		// 	post.trackOrAlbumTitle || post.title,
+		// 	post.trackOrAlbumTitle || post.title,
+		// 	authTokenBase64,
+		// 	wordpressEndpoint,
+		// );
+	}
+
+	let title = "";
+	if (post.featureType === "album") {
+		title = `${post.artist} Releases Album [${post.trackOrAlbumTitle}]`;
+	} else if (post.featureType === "mv") {
+		title = `${post.artist} Releases Music Video '${post.trackOrAlbumTitle}'`;
+	} else if (post.featureType === "track") {
+		title = `${post.artist} Releases Single '${post.trackOrAlbumTitle}'`;
+	} else {
+		title = post.title;
 	}
 
 	const wpPost: WordPressPostPayload = {
-		title: post.title, // todo: change this to a specific format
+		title: title,
 		content: JSON.stringify(post, null, 2),
 		status: "draft",
+		featured_media: featuredMediaId ?? undefined,
 	};
 
-	if (featuredMediaId) {
-		wpPost.featured_media = featuredMediaId;
-	}
+	console.log({ wpPost });
 
-	try {
-		const response = await fetch(`${wordpressEndpoint}/wp/v2/posts`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Basic ${authTokenBase64}`,
-			},
-			body: JSON.stringify(wpPost),
-		});
+	return true;
+	// try {
+	// 	const response = await fetch(`${wordpressEndpoint}/wp/v2/posts`, {
+	// 		method: "POST",
+	// 		headers: {
+	// 			"Content-Type": "application/json",
+	// 			Authorization: `Basic ${authTokenBase64}`,
+	// 		},
+	// 		body: JSON.stringify(wpPost),
+	// 	});
 
-		if (!response.ok) {
-			const errorText = await response.text();
-			console.error(
-				`Wordpress: failed to create post: ${response.status} - ${errorText}`,
-			);
-			return false;
-		}
+	// 	if (!response.ok) {
+	// 		const errorText = await response.text();
+	// 		console.error(
+	// 			`Wordpress: failed to create post: ${response.status} - ${errorText}`,
+	// 		);
+	// 		return false;
+	// 	}
 
-		const responseData = await response.json();
-		console.info(
-			`WordPress: post created successfully (ID: ${responseData.id}, Status: ${responseData.status}): ${responseData.link}`,
-		);
-		return true;
-	} catch (error) {
-		console.error("Error creating WordPress post:", error);
-		return false;
-	}
+	// 	const responseData = await response.json();
+	// 	console.info(
+	// 		`WordPress: post created successfully (ID: ${responseData.id}, Status: ${responseData.status}): ${responseData.link}`,
+	// 	);
+	// 	return true;
+	// } catch (error) {
+	// 	console.error("Error creating WordPress post:", error);
+	// 	return false;
+	// }
 }
