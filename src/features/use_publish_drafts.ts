@@ -1,5 +1,5 @@
 import { message } from "@tauri-apps/plugin-dialog";
-import { listRedditPostsById } from "@/lib/db";
+import { listRedditPostsById, log } from "@/lib/db";
 import type { ProcessedRedditPost } from "@/lib/reddit_client";
 import { createWordPressPost } from "@/lib/wordpress_client";
 import { useMutation } from "@tanstack/react-query";
@@ -39,6 +39,7 @@ export function usePublishDrafts() {
 					successCount++;
 				} catch (error) {
 					console.error("Error publishing post:", error);
+					log("error", `Error publishing post: ${JSON.stringify(error)}`);
 				}
 			}
 

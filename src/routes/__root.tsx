@@ -26,6 +26,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 									<Link to="/configuration">
 										<Button variant="outline">⚙️ Configuration</Button>
 									</Link>
+
+									<Link to="/debug">
+										<Button variant="ghost">Debug</Button>
+									</Link>
 								</div>
 								<Button
 									variant="destructive"

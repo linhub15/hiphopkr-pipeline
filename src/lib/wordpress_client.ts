@@ -1,5 +1,6 @@
 import { fetch } from "@tauri-apps/plugin-http";
 import type { ProcessedRedditPost } from "./reddit_client";
+import { log } from "./db";
 
 async function uploadMediaToWordPress(
 	imageUrl: string,
@@ -43,6 +44,10 @@ async function uploadMediaToWordPress(
 
 		if (!mediaResponse.ok) {
 			const errorText = await mediaResponse.text();
+			await log(
+				"error",
+				`Failed to upload media: ${mediaResponse.status} - ${errorText}`,
+			);
 			console.error(
 				`Failed to upload media to WordPress: ${mediaResponse.status} - ${errorText}`,
 			);

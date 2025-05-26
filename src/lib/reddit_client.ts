@@ -36,6 +36,8 @@ interface ProcessedRedditPost {
 	albumCoverUrl?: string;
 	description?: string;
 	spotifyLink?: string;
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	spotifyData?: Record<string, any>;
 	appleMusicLink?: string;
 }
 

@@ -11,10 +11,17 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as DebugImport } from './routes/debug'
 import { Route as ConfigurationImport } from './routes/configuration'
 import { Route as IndexImport } from './routes/index'
 
 // Create/Update Routes
+
+const DebugRoute = DebugImport.update({
+  id: '/debug',
+  path: '/debug',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const ConfigurationRoute = ConfigurationImport.update({
   id: '/configuration',
@@ -46,6 +53,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfigurationImport
       parentRoute: typeof rootRoute
     }
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -54,36 +68,41 @@ declare module '@tanstack/react-router' {
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/configuration': typeof ConfigurationRoute
+  '/debug': typeof DebugRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/configuration': typeof ConfigurationRoute
+  '/debug': typeof DebugRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/configuration': typeof ConfigurationRoute
+  '/debug': typeof DebugRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/configuration'
+  fullPaths: '/' | '/configuration' | '/debug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/configuration'
-  id: '__root__' | '/' | '/configuration'
+  to: '/' | '/configuration' | '/debug'
+  id: '__root__' | '/' | '/configuration' | '/debug'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfigurationRoute: typeof ConfigurationRoute
+  DebugRoute: typeof DebugRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfigurationRoute: ConfigurationRoute,
+  DebugRoute: DebugRoute,
 }
 
 export const routeTree = rootRoute
@@ -97,7 +116,8 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/configuration"
+        "/configuration",
+        "/debug"
       ]
     },
     "/": {
@@ -105,6 +125,9 @@ export const routeTree = rootRoute
     },
     "/configuration": {
       "filePath": "configuration.tsx"
+    },
+    "/debug": {
+      "filePath": "debug.tsx"
     }
   }
 }

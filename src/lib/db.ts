@@ -32,7 +32,46 @@ CREATE TABLE IF NOT EXISTS config (
 );`,
 	);
 
+	await db.execute(
+		`CREATE TABLE IF NOT EXISTS log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			level TEXT,
+			message TEXT
+		);`,
+	);
+
 	await db.close();
+}
+
+export async function log(level: "info" | "warn" | "error", message: string) {
+	const db = await Database.load(DB_PATH);
+	await db.execute(
+		"INSERT INTO log (level, message, created_at) VALUES (?, ?, ?)",
+		[level, message, new Date()],
+	);
+	await db.close();
+}
+
+export async function listLogs() {
+	const db = await Database.load(DB_PATH);
+	const result = await db.select<
+		{ created_at: string; level: string; message: string }[]
+	>(`SELECT
+			created_at,
+			level,
+			message
+		FROM log
+		ORDER BY created_at DESC
+		LIMIT 100
+		`);
+	await db.close();
+
+	return result.map((row) => ({
+		created_at: new Date(row.created_at),
+		level: row.level,
+		message: row.message,
+	}));
 }
 
 export async function getConfig() {
@@ -193,7 +232,7 @@ export async function saveRedditPost(post: RedditPost) {
 			post.flair,
 			post.posted_at.valueOf(),
 			post.created_at.valueOf(),
-			post.data ? JSON.stringify(post.data) : {},
+			post.data,
 		],
 	);
 	await db.close();

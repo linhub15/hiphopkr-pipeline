@@ -235,6 +235,8 @@ export async function enrichWithMusicData(
 		post.spotifyLink = album.external_urls.spotify;
 		post.featureType = "album"; // Or map more granularly
 		post.producers = extractProducers(album);
+		post.spotifyData =
+			(await getSpotifyAlbumDetails(album.id, token)) ?? undefined;
 	}
 
 	return post;
